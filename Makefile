@@ -42,7 +42,7 @@ validation: ## Tests against obp and scikit-learn (obp is installed without its 
 	uv pip install --no-deps obp==0.5.7
 	uv run --no-sync pytest -m validation -v
 
-data: ## Stream Criteo (1 row in 4, 1.35 GB) and the Open Bandit Dataset into $(DATA)
+data: ## Stream Criteo (1 row in 4), the Open Bandit Dataset and Criteo Attribution into $(DATA)
 	scripts/download_data.sh $(DATA)
 
 diagram: ## Render architecture diagram to SVG
