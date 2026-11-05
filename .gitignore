@@ -32,3 +32,10 @@ checkpoints/
 .DS_Store
 .idea/
 .vscode/
+.pytest-tmp/
+rust/target/
+*.so
+.scratch*
+*.log
+.demo/
+.hypothesis/
