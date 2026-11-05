@@ -57,3 +57,88 @@ def test_ftrl_close_to_sklearn_logistic_regression(clicks: Table) -> None:
     y = clicks.labels[te]
     assert abs(log_loss(y, p) - log_loss(y, p_ref)) < 0.01
     assert abs(roc_auc(y, p) - roc_auc(y, p_ref)) < 0.01
+
+
+def _obp_inputs(seed: int, n: int = 3000, A: int = 7, K: int = 3):  # type: ignore[no-untyped-def]
+    rng = np.random.default_rng(seed)
+    action = rng.integers(0, A, n)
+    position = rng.integers(0, K, n)
+    pscore = rng.uniform(0.02, 1.0, n)
+    reward = rng.binomial(1, 0.2, n).astype(float)
+    pi = rng.dirichlet(np.ones(A), (n, K)).transpose(0, 2, 1)
+    q = rng.uniform(0, 1, (n, A, K))
+    return action, position, pscore, reward, pi, q
+
+
+@pytest.mark.parametrize("seed", range(5))
+def test_ope_estimators_match_obp(seed: int) -> None:
+    obp = pytest.importorskip("obp.ope")
+    from ad_auction_lab.ope import BanditLog, estimate
+
+    action, position, pscore, reward, pi, q = _obp_inputs(seed)
+    log = BanditLog.from_arrays(reward, action, pscore, position, 7, 3)
+    common = {
+        "reward": reward,
+        "action": action,
+        "position": position,
+        "pscore": pscore,
+        "action_dist": pi,
+    }
+    tau = float(np.quantile(pi[np.arange(len(action)), action, position] / pscore, 0.9))
+    refs = {
+        "ips": (obp.InverseProbabilityWeighting(), {}),
+        "snips": (obp.SelfNormalizedInverseProbabilityWeighting(), {}),
+        "dm": (obp.DirectMethod(), {"estimated_rewards_by_reg_model": q}),
+        "dr": (obp.DoublyRobust(), {"estimated_rewards_by_reg_model": q}),
+        "sndr": (obp.SelfNormalizedDoublyRobust(), {"estimated_rewards_by_reg_model": q}),
+        "switch-dr": (obp.SwitchDoublyRobust(lambda_=tau), {"estimated_rewards_by_reg_model": q}),
+    }
+    for name, (est, extra) in refs.items():
+        kw = {**common, **extra}
+        if name == "dm":
+            kw.pop("reward")
+            kw.pop("pscore")
+        expected = est.estimate_policy_value(**kw)
+        got = estimate(name, log, pi, q, tau=tau)  # type: ignore[arg-type]
+        assert got == pytest.approx(expected, rel=1e-12, abs=1e-15), name
+    clipped = obp.InverseProbabilityWeighting(lambda_=2.0).estimate_policy_value(**common)
+    assert estimate("ips", log, pi, clip=2.0) == pytest.approx(clipped, rel=1e-12)
+    dr_clip = obp.DoublyRobust(lambda_=2.0).estimate_policy_value(
+        **common, estimated_rewards_by_reg_model=q
+    )
+    assert estimate("dr", log, pi, q, clip=2.0) == pytest.approx(dr_clip, rel=1e-12)
+
+
+def test_ope_on_open_bandit_dataset_sample_matches_obp() -> None:
+    """Same numbers as obp on the first 50,000 random-policy rounds of the real data, if present."""
+
+    obp = pytest.importorskip("obp.ope")
+    from pathlib import Path
+
+    from ad_auction_lab.obd import load_obd
+    from ad_auction_lab.ope import estimate, item_position_model, marginal_action_dist
+
+    d = Path(__file__).resolve().parents[2] / ".bench-data" / "ad-auction-lab" / "obd"
+    if not (d / "random_men.npz").exists():
+        pytest.skip("Open Bandit Dataset not prepared")
+    rnd = load_obd(d, "random", "men")
+    log = rnd.log.take(np.arange(50_000))
+    pi = marginal_action_dist(load_obd(d, "bts", "men").log)
+    q = item_position_model(log)
+    n = len(log)
+    pi3 = np.broadcast_to(pi, (n, *pi.shape))
+    q3 = np.broadcast_to(q, (n, *q.shape))
+    kw = {
+        "reward": log.reward,
+        "action": log.action,
+        "position": log.position,
+        "pscore": log.pscore,
+        "action_dist": pi3,
+    }
+    assert estimate("ips", log, pi) == pytest.approx(
+        obp.InverseProbabilityWeighting().estimate_policy_value(**kw), rel=1e-12
+    )
+    assert estimate("dr", log, pi, q) == pytest.approx(
+        obp.DoublyRobust().estimate_policy_value(**kw, estimated_rewards_by_reg_model=q3),
+        rel=1e-12,
+    )
