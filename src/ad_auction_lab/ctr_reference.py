@@ -75,7 +75,8 @@ class FtrlReference:
         w = self.weights()
         idx = hash_rows(table.small[rows], table.wide[rows], self.bits)
         s = float(w[-1]) + w[idx].astype(np.float64).sum(axis=1)
-        return (1 / (1 + np.exp(-np.clip(s, -35, 35)))).astype(np.float32)
+        out: NDArray[np.float32] = (1 / (1 + np.exp(-np.clip(s, -35, 35)))).astype(np.float32)
+        return out
 
 
 def fm_init(seed: int, size: int, scale: float) -> NDArray[np.float32]:
@@ -149,4 +150,5 @@ class FmReference:
         s = vv.sum(axis=1)
         inter = (s * s).sum(axis=1) - (vv * vv).sum(axis=(1, 2))
         score = self.w0 + self.w[idx].astype(np.float64).sum(axis=1) + 0.5 * inter
-        return (1 / (1 + np.exp(-np.clip(score, -35, 35)))).astype(np.float32)
+        out: NDArray[np.float32] = (1 / (1 + np.exp(-np.clip(score, -35, 35)))).astype(np.float32)
+        return out
