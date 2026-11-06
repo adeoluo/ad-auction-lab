@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from ad_auction_lab import __version__
+import sys
 
-
-def main() -> None:
-    print(f"ad-auction-lab {__version__}")
-
+from ad_auction_lab.cli import main
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

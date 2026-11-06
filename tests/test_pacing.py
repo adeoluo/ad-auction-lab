@@ -8,7 +8,13 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from ad_auction_lab.backend import rust_available
-from ad_auction_lab.pacing import Pacer, hindsight_optimum, simulate, simulate_reference
+from ad_auction_lab.pacing import (
+    Pacer,
+    build_market,
+    hindsight_optimum,
+    simulate,
+    simulate_reference,
+)
 
 needs_rust = pytest.mark.skipif(not rust_available(), reason="Rust extension not built")
 
@@ -170,3 +176,28 @@ def test_one_dimensional_ctr_and_summary_fields() -> None:
     assert r.trajectory.shape == (1, 1)
     assert set(s) >= {"value", "spend", "roi", "utilization", "max_tracking_error"}
     assert s["roi"] == pytest.approx(10.0)
+
+
+def test_build_market_from_real_style_samples() -> None:
+    rng = np.random.default_rng(3)
+    prices = rng.lognormal(-5, 1, 5000)
+    pool = rng.beta(2, 60, 3000)
+    m = build_market(prices, pool, horizon=2000, n_advertisers=4, budget_share=0.4, seed=1)
+    assert m.market.shape == (2000,) and m.ctr.shape == (2000, 4)
+    assert np.allclose(m.budgets, 0.4 * m.unpaced_spend)
+    # The window is contiguous in the price stream.
+    start = int(np.flatnonzero(np.isclose(prices.astype(np.float32), m.market[0]))[0])
+    assert np.allclose(prices[start : start + 2000].astype(np.float32), m.market)
+    paced = simulate(m.values, m.budgets, m.ctr, m.market, Pacer("dual", step=0.01))
+    assert np.all(paced.spend <= m.budgets * (1 + 1e-6) + 1e-9)
+    again = build_market(prices, pool, horizon=2000, n_advertisers=4, budget_share=0.4, seed=1)
+    assert np.array_equal(again.values, m.values)
+
+
+@pytest.mark.parametrize(
+    ("horizon", "n", "share", "pool"),
+    [(0, 2, 0.3, 10), (10**6, 2, 0.3, 10), (10, 0, 0.3, 10), (10, 2, 0.0, 10), (10, 2, 0.3, 0)],
+)
+def test_build_market_rejects_bad_inputs(horizon: int, n: int, share: float, pool: int) -> None:
+    with pytest.raises(ValueError):
+        build_market(np.ones(100), np.full(pool, 0.01), horizon, n, budget_share=share)
