@@ -34,9 +34,13 @@ from ad_auction_lab.ctr import FactorizationMachine, FTRLProximal
 from ad_auction_lab.data import Table, load_criteo, split_rows
 from ad_auction_lab.metrics import calibration, delong, paired_loss_test, summary
 
+# Chosen on the validation split from ctr_sweep.json and ctr_sweep_fm.json. FTRL: alpha 0.05 with
+# L1 1.0 is within 0.0002 logloss of L1 0 after 2 passes and keeps fewer weights. FM: k 32 at rate
+# 0.01 after 1 pass is the best of both grids; every FM overfits on its second pass.
 FTRL_BEST = {"alpha": 0.05, "l1": 1.0, "bits": 22}
-FM_BEST = {"k": 16, "lr": 0.05, "bits": 22}
-FM_EPOCHS = 2
+FTRL_EPOCHS = 2
+FM_BEST = {"k": 32, "lr": 0.01, "l2_factor": 1e-5, "bits": 22}
+FM_EPOCHS = 1
 
 
 def load(seed: int = 0) -> tuple[Table, Any, Any, Any, float]:
@@ -129,7 +133,7 @@ def cmd_final(a: argparse.Namespace) -> None:
         for kind in ("ftrl", "fm"):
             if kind == "ftrl":
                 m: Any = FTRLProximal(**FTRL_BEST)
-                epochs = 1
+                epochs = FTRL_EPOCHS
             else:
                 m = FactorizationMachine(**FM_BEST, seed=seed)
                 epochs = FM_EPOCHS
@@ -160,11 +164,15 @@ def cmd_final(a: argparse.Namespace) -> None:
             "rows": sizes,
             "base_rate": base0,
             "seeds": "split seeds 0..n-1 (random 80/10/10 partitions); FM init seed = split seed",
-            "ftrl_config": FTRL_BEST,
+            "ftrl_config": {**FTRL_BEST, "epochs": FTRL_EPOCHS},
             "fm_config": {**FM_BEST, "epochs": FM_EPOCHS},
             **results,
         },
     )
+
+
+def _epochs(m: FTRLProximal | FactorizationMachine) -> int:
+    return FTRL_EPOCHS if isinstance(m, FTRLProximal) else FM_EPOCHS
 
 
 def cmd_ablate(a: argparse.Namespace) -> None:
@@ -173,7 +181,7 @@ def cmd_ablate(a: argparse.Namespace) -> None:
     out: dict[str, Any] = {"bits": [], "fields": [], "train_size": [], "fm_k": [], "l1": []}
     for l1 in (0.0, 1.0, 4.0, 16.0):
         m = FTRLProximal(**{**FTRL_BEST, "l1": l1})
-        r = run(m, t, train, ev, base)
+        r = run(m, t, train, ev, base, epochs=_epochs(m))
         r["nonzero_weights"] = int(np.count_nonzero(m.weights()))
         out["l1"].append({"model": "ftrl", "l1": l1, **r})
     for bits in (16, 18, 20, 22, 24):
@@ -183,7 +191,7 @@ def cmd_ablate(a: argparse.Namespace) -> None:
                 if kind == "ftrl"
                 else FactorizationMachine(**{**FM_BEST, "bits": bits})
             )
-            r = run(m, t, train, ev, base)
+            r = run(m, t, train, ev, base, epochs=_epochs(m))
             out["bits"].append({"model": kind, "bits": bits, **r})
     n = len(t)
     groups = {
@@ -193,16 +201,16 @@ def cmd_ablate(a: argparse.Namespace) -> None:
     for name, tab in groups.items():
         for kind in ("ftrl", "fm"):
             m = FTRLProximal(**FTRL_BEST) if kind == "ftrl" else FactorizationMachine(**FM_BEST)
-            r = run(m, tab, train, ev, base)
+            r = run(m, tab, train, ev, base, epochs=_epochs(m))
             out["fields"].append({"model": kind, "fields": name, **r})
     for size in (100_000, 300_000, 1_000_000, 3_000_000, len(train)):
         for kind in ("ftrl", "fm"):
             m = FTRLProximal(**FTRL_BEST) if kind == "ftrl" else FactorizationMachine(**FM_BEST)
-            r = run(m, t, train[:size], ev, base)
+            r = run(m, t, train[:size], ev, base, epochs=_epochs(m))
             out["train_size"].append({"model": kind, "train_rows": size, **r})
     for k in (1, 2, 4, 8, 16, 32):
         m = FactorizationMachine(**{**FM_BEST, "k": k})
-        r = run(m, t, train, ev, base)
+        r = run(m, t, train, ev, base, epochs=_epochs(m))
         out["fm_k"].append({"k": k, **r})
     write("ctr_ablation", {"base_rate": base, "test_rows": len(test), **out})
 
