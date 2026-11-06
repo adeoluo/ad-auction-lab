@@ -45,6 +45,29 @@ validation: ## Tests against obp and scikit-learn (obp is installed without its 
 data: ## Stream Criteo (1 row in 4), the Open Bandit Dataset and Criteo Attribution into $(DATA)
 	scripts/download_data.sh $(DATA)
 
+evaluation: ## Every benchmark on the full data (about 2 hours on an M1; needs `make data validation`)
+	uv run --no-sync python benchmarks/ctr_criteo.py sweep
+	uv run --no-sync python benchmarks/ctr_criteo.py sweep-fm
+	uv run --no-sync python benchmarks/ctr_criteo.py final
+	uv run --no-sync python benchmarks/ctr_criteo.py ablate
+	uv run --no-sync python benchmarks/ctr_criteo.py reference
+	uv run --no-sync python benchmarks/ctr_criteo.py speed
+	uv run --no-sync python benchmarks/ope_obd.py main
+	uv run --no-sync python benchmarks/ope_obd.py curve
+	uv run --no-sync python benchmarks/ope_obd.py ablate
+	uv run --no-sync python benchmarks/ope_obd.py obp
+	uv run --no-sync python benchmarks/markets.py incentives
+	uv run --no-sync python benchmarks/markets.py reserves
+	uv run --no-sync python benchmarks/markets.py shading
+	uv run --no-sync python benchmarks/markets.py pacing
+	uv run --no-sync python benchmarks/markets.py speed
+
+report: ## Print the README tables from benchmarks/results/
+	uv run --no-sync python benchmarks/report.py
+
+demos: ## Record the demo GIFs (needs vhs and the prepared data)
+	for t in docs/demo/*.tape; do vhs "$$t"; done
+
 diagram: ## Render architecture diagram to SVG
 	npx -y @mermaid-js/mermaid-cli -i docs/architecture/architecture.mmd \
 	     -o docs/architecture/architecture.svg \
