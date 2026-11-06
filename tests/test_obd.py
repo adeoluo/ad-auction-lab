@@ -10,43 +10,7 @@ import pytest
 from ad_auction_lab.ctr import FactorizationMachine, FTRLProximal
 from ad_auction_lab.obd import cross_fit_model_terms, load_obd, reward_table
 from ad_auction_lab.ope import estimate, marginal_action_dist, model_terms, round_terms
-
-A, N = 6, 4000
-
-
-def write_fixture(d: Path, seed: int = 0) -> None:
-    """A small dataset in the format of ``scripts/prepare_obd.py``."""
-
-    rng = np.random.default_rng(seed)
-    user = rng.integers(0, 2**32, (N, 4), dtype=np.uint64).astype(np.uint32)
-    user[:, 0] = rng.integers(0, 3, N)  # a feature with a real effect
-    affinity = rng.integers(0, 5, (N, A)).astype(np.uint8)
-    item = rng.integers(0, A, N).astype(np.uint8)
-    logit = -2.0 + 0.6 * (user[:, 0] == item % 3) + 0.3 * affinity[np.arange(N), item]
-    click = (rng.random(N) < 1 / (1 + np.exp(-logit))).astype(np.uint8)
-    np.savez(
-        d / "random_all.npz",
-        item=item,
-        position=rng.integers(0, 3, N).astype(np.uint8),
-        click=click,
-        pscore=np.full(N, 1 / A),
-        user=user,
-        affinity=affinity,
-    )
-    p = rng.dirichlet(np.ones(A), N).max(axis=1)
-    np.savez(
-        d / "bts_all.npz",
-        item=rng.integers(0, A, N).astype(np.uint8),
-        position=rng.integers(0, 3, N).astype(np.uint8),
-        click=(rng.random(N) < 0.1).astype(np.uint8),
-        pscore=p,
-    )
-    np.savez(
-        d / "item_all.npz",
-        item_id=np.arange(A),
-        feature_0=rng.normal(size=A),
-        features=rng.integers(0, 2**31, (A, 3)),
-    )
+from tests.fixtures import A, N, write_fixture
 
 
 @pytest.fixture

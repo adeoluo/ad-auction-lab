@@ -279,3 +279,51 @@ def hindsight_optimum(value: ArrayLike, price: ArrayLike, budget: float) -> dict
         spent = budget
         mu = max(float(ratio[order[k]]) - 1.0, 0.0)
     return {"value": total, "spend": spent, "multiplier": 1.0 / (1.0 + mu), "dual": mu}
+
+
+@dataclass
+class MarketSample:
+    """Inputs of :func:`simulate` built from real price and CTR samples."""
+
+    values: F64
+    budgets: F64
+    ctr: NDArray[np.float32]
+    market: NDArray[np.float32]
+    unpaced_spend: F64
+
+
+def build_market(
+    prices: ArrayLike,
+    ctr_pool: ArrayLike,
+    horizon: int,
+    n_advertisers: int,
+    budget_share: float = 0.3,
+    value_spread: tuple[float, float] = (0.5, 2.0),
+    seed: int = 0,
+) -> MarketSample:
+    """A market of ``horizon`` auctions from real data.
+
+    The external market eCPM is a contiguous, time-ordered window of observed prices (so daily
+    and weekly patterns are kept), each advertiser's CTR in each auction is drawn from
+    ``ctr_pool`` (predicted CTRs of a click model on held-out impressions), and values per click
+    are ``u_i * median(price) / median(ctr)`` with ``u_i`` log-uniform on ``value_spread``. Each
+    budget is ``budget_share`` times what the advertiser spends without a budget, so
+    ``budget_share < 1`` makes every budget binding.
+    """
+
+    p = np.asarray(prices, dtype=np.float32).reshape(-1)
+    pool = np.asarray(ctr_pool, dtype=np.float32).reshape(-1)
+    if horizon < 1 or horizon > p.size or n_advertisers < 1 or pool.size == 0:
+        raise ValueError("need 1 <= horizon <= len(prices), n_advertisers >= 1, a CTR pool")
+    if not budget_share > 0:
+        raise ValueError("budget_share must be positive")
+    rng = np.random.default_rng(seed)
+    start = int(rng.integers(0, p.size - horizon + 1))
+    market = np.ascontiguousarray(p[start : start + horizon])
+    ctr = pool[rng.integers(0, pool.size, (horizon, n_advertisers))]
+    scale = float(np.median(market)) / max(float(np.median(pool)), 1e-12)
+    lo, hi = value_spread
+    values = scale * np.exp(rng.uniform(np.log(lo), np.log(hi), n_advertisers))
+    free = simulate(values, np.full(n_advertisers, 1e30), ctr, market, Pacer("none"))
+    budgets = np.maximum(free.spend * budget_share, 1e-12)
+    return MarketSample(values, budgets, ctr, market, free.spend)
