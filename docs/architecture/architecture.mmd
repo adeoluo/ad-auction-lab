@@ -1,38 +1,46 @@
----
-title: System Architecture - Ad Auction Lab
-config:
-  theme: base
-  themeVariables:
-    fontFamily: "Inter, system-ui, sans-serif"
-    primaryColor: "#F8FAFC"
-    primaryBorderColor: "#1E293B"
-    primaryTextColor: "#1E293B"
-    lineColor: "#64748B"
-    clusterBkg: "#E2E8F0"
-    clusterBorder: "#94A3B8"
----
 flowchart LR
+    classDef edge     fill:#F59E0B,stroke:#1E293B,color:#1E293B,stroke-width:1px;
     classDef core     fill:#6366F1,stroke:#1E293B,color:#ffffff,stroke-width:1px;
     classDef data     fill:#10B981,stroke:#1E293B,color:#ffffff,stroke-width:1px;
-    classDef external fill:#F59E0B,stroke:#1E293B,color:#1E293B,stroke-width:1px;
-    classDef danger   fill:#EF4444,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef control  fill:#0EA5E9,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef obs      fill:#CBD5E1,stroke:#1E293B,color:#1E293B,stroke-width:1px;
 
-    User([User]):::external
-
-    subgraph Application["Application Service"]
-        API[API Layer]:::core
-        Core[Core Engine]:::core
-        Evaluation[Evaluation Harness]:::core
+    subgraph Interfaces["Interfaces"]
+        direction TB
+        Users([Analysts and clients]):::edge
+        CLI["CLI<br/>auction, pace, ope"]:::edge
+        HTTP["HTTP service<br/>/auction /predict /ope"]:::core
+        Validate["Validation<br/>shapes, limits"]:::control
+        Users --> CLI ~~~ HTTP --> Validate
     end
 
-    Cache[(Semantic Cache)]:::data
-    Store[(Datastore / Index)]:::data
-    LLM{{LLM Provider}}:::external
+    subgraph State["Data and state"]
+        direction TB
+        Criteo[("Criteo clicks<br/>11.46M rows")]:::data
+        OBD[("Open Bandit logs<br/>random and BTS")]:::data
+        Prices[("Market prices<br/>16.5M impressions")]:::data
+        Models[("Model weights<br/>FTRL, FM .npz")]:::data
+        Criteo ~~~ OBD ~~~ Prices ~~~ Models
+    end
 
-    User -->|request| API
-    API --> Core
-    Core -->|lookup| Cache
-    Core -->|retrieve| Store
-    Core -->|completion| LLM
-    Core -.->|traces/metrics| Evaluation
-    Core -->|response| User
+    subgraph Core["Core logic"]
+        direction TB
+        CTR["CTR models<br/>FTRL, FM in Rust"]:::core
+        Auctions["Auctions<br/>GSP, VCG, first price"]:::core
+        Bidding["Shading and pacing<br/>PID, dual in Rust"]:::core
+        OPE["OPE estimators<br/>IPS to Switch-DR"]:::core
+        CTR --> Auctions --> Bidding ~~~ OPE
+    end
+
+    subgraph Obs["Evaluation"]
+        direction TB
+        Metrics["CTR metrics<br/>logloss, AUC, NE"]:::obs
+        Calib["Calibration<br/>Platt, isotonic"]:::obs
+        Boot["Bootstrap CIs<br/>obp parity"]:::obs
+        Results["Benchmark JSON<br/>and /metrics"]:::obs
+        Metrics --> Calib ~~~ Boot --> Results
+    end
+
+    Interfaces -->|load| State
+    State -->|rows, prices| Core
+    Core -->|scores| Obs

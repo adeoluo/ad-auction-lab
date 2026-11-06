@@ -1,0 +1,755 @@
+{
+  "machine": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "python": "3.12.14",
+    "numpy": "2.5.4",
+    "load_average_1m": 2.31298828125,
+    "date": "2026-11-06T17:19:30"
+  },
+  "peak_rss_mb": 2773.796875,
+  "train_rows": 9168124,
+  "valid_rows": 1146015,
+  "base_rate": 0.2562875458490745,
+  "runs": [
+    {
+      "params": {
+        "k": 8,
+        "bits": 22,
+        "lr": 0.005,
+        "l2_linear": 0.0,
+        "l2_factor": 1e-05,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 23.323306874983246,
+          "rows_per_s": 393088.512239823,
+          "progressive_logloss": 0.46354487476354794,
+          "valid": {
+            "logloss": 0.4592973269866537,
+            "auc": 0.7907649354061,
+            "normalized_entropy": 0.8070053748981655,
+            "calibration_ratio": 1.0041608521628222,
+            "ece": 0.007397747621233289,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 23.057599374995334,
+          "rows_per_s": 397618.3231781845,
+          "progressive_logloss": 0.44356038274857795,
+          "valid": {
+            "logloss": 0.4578990610758228,
+            "auc": 0.792279218168573,
+            "normalized_entropy": 0.8045485608927789,
+            "calibration_ratio": 1.0072341183178064,
+            "ece": 0.004439430704085503,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 8,
+        "bits": 22,
+        "lr": 0.005,
+        "l2_linear": 0.0,
+        "l2_factor": 0.0001,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 19.18018879200099,
+          "rows_per_s": 477999.6745299777,
+          "progressive_logloss": 0.4635479041572049,
+          "valid": {
+            "logloss": 0.4593023167891852,
+            "auc": 0.7907595531706212,
+            "normalized_entropy": 0.8070141421981823,
+            "calibration_ratio": 1.0041638335282816,
+            "ece": 0.007397695167569568,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 20.823884959012503,
+          "rows_per_s": 440269.6239460384,
+          "progressive_logloss": 0.4435709332286715,
+          "valid": {
+            "logloss": 0.45790428819885637,
+            "auc": 0.7922728080419086,
+            "normalized_entropy": 0.8045577451752371,
+            "calibration_ratio": 1.007238514342378,
+            "ece": 0.004448090790738822,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 8,
+        "bits": 22,
+        "lr": 0.01,
+        "l2_linear": 0.0,
+        "l2_factor": 1e-05,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 26.41525737498887,
+          "rows_per_s": 347076.8378233098,
+          "progressive_logloss": 0.46058527991507375,
+          "valid": {
+            "logloss": 0.45586179684590244,
+            "auc": 0.7946203049427877,
+            "normalized_entropy": 0.8009689990555264,
+            "calibration_ratio": 0.9962342871959249,
+            "ece": 0.006576334736290998,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 18.06165937500191,
+          "rows_per_s": 507601.4229727456,
+          "progressive_logloss": 0.4300574068773319,
+          "valid": {
+            "logloss": 0.4564021462282731,
+            "auc": 0.7943568566449926,
+            "normalized_entropy": 0.801918416416078,
+            "calibration_ratio": 0.9925035486256029,
+            "ece": 0.008751572197005973,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 8,
+        "bits": 22,
+        "lr": 0.01,
+        "l2_linear": 0.0,
+        "l2_factor": 0.0001,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 19.358127540996065,
+          "rows_per_s": 473605.9301491852,
+          "progressive_logloss": 0.46057530806641933,
+          "valid": {
+            "logloss": 0.4558496938391148,
+            "auc": 0.7946309998749781,
+            "normalized_entropy": 0.8009477335463319,
+            "calibration_ratio": 0.9962774700100513,
+            "ece": 0.0065586043189111,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 111.04742345801787,
+          "rows_per_s": 82560.43872522682,
+          "progressive_logloss": 0.43006678019193423,
+          "valid": {
+            "logloss": 0.45636712989100187,
+            "auc": 0.794383643094375,
+            "normalized_entropy": 0.8018568911888956,
+            "calibration_ratio": 0.9926674632861755,
+            "ece": 0.0086848922822366,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 8,
+        "bits": 22,
+        "lr": 0.02,
+        "l2_linear": 0.0,
+        "l2_factor": 1e-05,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 55.05508537500282,
+          "rows_per_s": 166526.37876323576,
+          "progressive_logloss": 0.45879669272825135,
+          "valid": {
+            "logloss": 0.4540009501161583,
+            "auc": 0.7966821853961146,
+            "normalized_entropy": 0.7976994104371524,
+            "calibration_ratio": 0.9967961466153061,
+            "ece": 0.005504068846556337,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 74.04164579199278,
+          "rows_per_s": 123823.88184287882,
+          "progressive_logloss": 0.41563901890953187,
+          "valid": {
+            "logloss": 0.4582960175502979,
+            "auc": 0.793525238177543,
+            "normalized_entropy": 0.8052460306790801,
+            "calibration_ratio": 0.9916137119295886,
+            "ece": 0.015359266248503343,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 8,
+        "bits": 22,
+        "lr": 0.02,
+        "l2_linear": 0.0,
+        "l2_factor": 0.0001,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 120.77289754099911,
+          "rows_per_s": 75912.09771950427,
+          "progressive_logloss": 0.458782022469851,
+          "valid": {
+            "logloss": 0.45398059972687926,
+            "auc": 0.7967069655465122,
+            "normalized_entropy": 0.797663653918304,
+            "calibration_ratio": 0.9969118846371456,
+            "ece": 0.005525895335982723,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 84.9340101670241,
+          "rows_per_s": 107944.084848587,
+          "progressive_logloss": 0.4155967998702039,
+          "valid": {
+            "logloss": 0.45826114557487885,
+            "auc": 0.793565654435009,
+            "normalized_entropy": 0.8051847591019491,
+            "calibration_ratio": 0.9918118538922325,
+            "ece": 0.015296830428479364,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 16,
+        "bits": 22,
+        "lr": 0.005,
+        "l2_linear": 0.0,
+        "l2_factor": 1e-05,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 207.77356091700494,
+          "rows_per_s": 44125.55649302369,
+          "progressive_logloss": 0.4620223420830436,
+          "valid": {
+            "logloss": 0.45749265266540684,
+            "auc": 0.7929883186947451,
+            "normalized_entropy": 0.8038344836440363,
+            "calibration_ratio": 1.0007730282108795,
+            "ece": 0.007599387001848281,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 23.502566624985775,
+          "rows_per_s": 390090.3312514511,
+          "progressive_logloss": 0.43753974366364035,
+          "valid": {
+            "logloss": 0.45636814056574604,
+            "auc": 0.7942162724864459,
+            "normalized_entropy": 0.8018586669883677,
+            "calibration_ratio": 1.0019965745971013,
+            "ece": 0.005005051871943297,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 16,
+        "bits": 22,
+        "lr": 0.005,
+        "l2_linear": 0.0,
+        "l2_factor": 0.0001,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 23.82169154199073,
+          "rows_per_s": 384864.5249997993,
+          "progressive_logloss": 0.4620342181350765,
+          "valid": {
+            "logloss": 0.4575089104809383,
+            "auc": 0.7929691549756257,
+            "normalized_entropy": 0.803863049332855,
+            "calibration_ratio": 1.0007978168588203,
+            "ece": 0.007613887833987916,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 18.089945790998172,
+          "rows_per_s": 506807.70998010377,
+          "progressive_logloss": 0.4375737982234475,
+          "valid": {
+            "logloss": 0.4563842831180722,
+            "auc": 0.7941954399607355,
+            "normalized_entropy": 0.8018870301547228,
+            "calibration_ratio": 1.0020221753677327,
+            "ece": 0.00499695371876427,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 16,
+        "bits": 22,
+        "lr": 0.01,
+        "l2_linear": 0.0,
+        "l2_factor": 1e-05,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 19.1614162500191,
+          "rows_per_s": 478467.9733676189,
+          "progressive_logloss": 0.45856439454609793,
+          "valid": {
+            "logloss": 0.45334091747827127,
+            "auc": 0.7975647106369254,
+            "normalized_entropy": 0.796539704392535,
+            "calibration_ratio": 0.9947154765881817,
+            "ece": 0.00671723629801934,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 17.62016591601423,
+          "rows_per_s": 520319.95860308426,
+          "progressive_logloss": 0.4188046017476613,
+          "valid": {
+            "logloss": 0.45487176711080723,
+            "auc": 0.7965693300501856,
+            "normalized_entropy": 0.7992294737620251,
+            "calibration_ratio": 0.9927344602978706,
+            "ece": 0.011650421286600647,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 16,
+        "bits": 22,
+        "lr": 0.01,
+        "l2_linear": 0.0,
+        "l2_factor": 0.0001,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 17.927953209000407,
+          "rows_per_s": 511387.0999728685,
+          "progressive_logloss": 0.45856284736028496,
+          "valid": {
+            "logloss": 0.4533555011375714,
+            "auc": 0.7975434436771582,
+            "normalized_entropy": 0.7965653285160589,
+            "calibration_ratio": 0.9946573921568039,
+            "ece": 0.006681444172330695,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 17.492557791993022,
+          "rows_per_s": 524115.6901706269,
+          "progressive_logloss": 0.4188230181933767,
+          "valid": {
+            "logloss": 0.4548813365617797,
+            "auc": 0.796555184078674,
+            "normalized_entropy": 0.7992462877034872,
+            "calibration_ratio": 0.9926498026423558,
+            "ece": 0.011612523846587102,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 16,
+        "bits": 22,
+        "lr": 0.02,
+        "l2_linear": 0.0,
+        "l2_factor": 1e-05,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 19.002420332981274,
+          "rows_per_s": 482471.3820316604,
+          "progressive_logloss": 0.458113698646817,
+          "valid": {
+            "logloss": 0.4528466095927697,
+            "auc": 0.7981385831532557,
+            "normalized_entropy": 0.7956711839439805,
+            "calibration_ratio": 0.9971611822911107,
+            "ece": 0.005441787727911328,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 17.612655542005086,
+          "rows_per_s": 520541.83300948545,
+          "progressive_logloss": 0.4004442357492941,
+          "valid": {
+            "logloss": 0.4594162238461551,
+            "auc": 0.7936802643910861,
+            "normalized_entropy": 0.8072142818502387,
+            "calibration_ratio": 0.9958451701186782,
+            "ece": 0.019771982475357497,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 16,
+        "bits": 22,
+        "lr": 0.02,
+        "l2_linear": 0.0,
+        "l2_factor": 0.0001,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 18.305539791996125,
+          "rows_per_s": 500838.76816397684,
+          "progressive_logloss": 0.45812175472165567,
+          "valid": {
+            "logloss": 0.45284715925441804,
+            "auc": 0.7981304527194921,
+            "normalized_entropy": 0.7956721497233973,
+            "calibration_ratio": 0.9971612243915007,
+            "ece": 0.00544702987535336,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 17.52763937501004,
+          "rows_per_s": 523066.67223376443,
+          "progressive_logloss": 0.40050685879187314,
+          "valid": {
+            "logloss": 0.4593773342734021,
+            "auc": 0.7936876706562478,
+            "normalized_entropy": 0.807145951179897,
+            "calibration_ratio": 0.995632161779872,
+            "ece": 0.019576338755881263,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 32,
+        "bits": 22,
+        "lr": 0.005,
+        "l2_linear": 0.0,
+        "l2_factor": 1e-05,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 37.06124441701104,
+          "rows_per_s": 247377.66214325628,
+          "progressive_logloss": 0.4600827761491718,
+          "valid": {
+            "logloss": 0.45497000366659573,
+            "auc": 0.7958555194932897,
+            "normalized_entropy": 0.7994020796621137,
+            "calibration_ratio": 0.9973174032342162,
+            "ece": 0.007722584870412736,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 35.80658016598318,
+          "rows_per_s": 256045.78704530583,
+          "progressive_logloss": 0.42848984708126364,
+          "valid": {
+            "logloss": 0.4542674325926092,
+            "auc": 0.7967179425362028,
+            "normalized_entropy": 0.7981676317355931,
+            "calibration_ratio": 0.9971456907669252,
+            "ece": 0.0068760141763567675,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 32,
+        "bits": 22,
+        "lr": 0.005,
+        "l2_linear": 0.0,
+        "l2_factor": 0.0001,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 36.51986324999598,
+          "rows_per_s": 251044.861182524,
+          "progressive_logloss": 0.46009362533166204,
+          "valid": {
+            "logloss": 0.45498654370427605,
+            "auc": 0.7958372165358519,
+            "normalized_entropy": 0.7994311412275197,
+            "calibration_ratio": 0.9973427378934264,
+            "ece": 0.007723826483702643,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 34.227267792011844,
+          "rows_per_s": 267860.2351701502,
+          "progressive_logloss": 0.42853759647412554,
+          "valid": {
+            "logloss": 0.4542761008470824,
+            "auc": 0.7967040943757109,
+            "normalized_entropy": 0.7981828622356197,
+            "calibration_ratio": 0.9971696271537844,
+            "ece": 0.00684607574621949,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 32,
+        "bits": 22,
+        "lr": 0.01,
+        "l2_linear": 0.0,
+        "l2_factor": 1e-05,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 36.484297791001154,
+          "rows_per_s": 251289.58360441067,
+          "progressive_logloss": 0.45725703267934936,
+          "valid": {
+            "logloss": 0.4518596583306042,
+            "auc": 0.7992756051558221,
+            "normalized_entropy": 0.7939370676612763,
+            "calibration_ratio": 0.9952940671915986,
+            "ece": 0.006399150171340814,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 38.45610354200471,
+          "rows_per_s": 238404.912499413,
+          "progressive_logloss": 0.40562597203469913,
+          "valid": {
+            "logloss": 0.45509223217975714,
+            "auc": 0.7970802431244722,
+            "normalized_entropy": 0.7996168404745361,
+            "calibration_ratio": 0.9951000775683029,
+            "ece": 0.014658818467516226,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 32,
+        "bits": 22,
+        "lr": 0.01,
+        "l2_linear": 0.0,
+        "l2_factor": 0.0001,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 37.224262291012565,
+          "rows_per_s": 246294.31010144032,
+          "progressive_logloss": 0.45726198287697434,
+          "valid": {
+            "logloss": 0.4518611550356954,
+            "auc": 0.7992713747047316,
+            "normalized_entropy": 0.7939396974372019,
+            "calibration_ratio": 0.9953655266631426,
+            "ece": 0.006397059749404293,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 35.6014028750069,
+          "rows_per_s": 257521.42498958262,
+          "progressive_logloss": 0.40571340793267435,
+          "valid": {
+            "logloss": 0.4550334218447332,
+            "auc": 0.7971237056249094,
+            "normalized_entropy": 0.7995135081586804,
+            "calibration_ratio": 0.9952032952037071,
+            "ece": 0.014605761132324133,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 32,
+        "bits": 22,
+        "lr": 0.02,
+        "l2_linear": 0.0,
+        "l2_factor": 1e-05,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 36.84857962501701,
+          "rows_per_s": 248805.35676809735,
+          "progressive_logloss": 0.45846840799728433,
+          "valid": {
+            "logloss": 0.45274532290408737,
+            "auc": 0.7983520624894199,
+            "normalized_entropy": 0.7954932188277701,
+            "calibration_ratio": 0.9975207083495535,
+            "ece": 0.00572797179725951,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 35.22622733400203,
+          "rows_per_s": 260264.1467413256,
+          "progressive_logloss": 0.3806867197435713,
+          "valid": {
+            "logloss": 0.46307346138655725,
+            "auc": 0.7915119816332549,
+            "normalized_entropy": 0.8136402072344499,
+            "calibration_ratio": 0.9961720240379375,
+            "ece": 0.02553039089664305,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    },
+    {
+      "params": {
+        "k": 32,
+        "bits": 22,
+        "lr": 0.02,
+        "l2_linear": 0.0,
+        "l2_factor": 0.0001,
+        "init_scale": 0.01,
+        "seed": 0
+      },
+      "epochs": [
+        {
+          "epoch": 1,
+          "seconds": 37.33005529100774,
+          "rows_per_s": 245596.31451198162,
+          "progressive_logloss": 0.45846874365457696,
+          "valid": {
+            "logloss": 0.45277189566748594,
+            "auc": 0.7983146132559713,
+            "normalized_entropy": 0.7955399083285108,
+            "calibration_ratio": 0.9978238669100568,
+            "ece": 0.005760160728903037,
+            "rows": 1146015.0
+          }
+        },
+        {
+          "epoch": 2,
+          "seconds": 34.77841562501271,
+          "rows_per_s": 263615.3440355766,
+          "progressive_logloss": 0.38082179883638323,
+          "valid": {
+            "logloss": 0.46302464117234865,
+            "auc": 0.791543085216031,
+            "normalized_entropy": 0.8135544279952618,
+            "calibration_ratio": 0.9964454877849873,
+            "ece": 0.02548757260220249,
+            "rows": 1146015.0
+          }
+        }
+      ]
+    }
+  ]
+}
