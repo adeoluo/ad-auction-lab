@@ -1,0 +1,151 @@
+{
+  "machine": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "python": "3.12.14",
+    "numpy": "2.5.4",
+    "load_average_1m": 14.693359375,
+    "date": "2026-11-06T22:37:34"
+  },
+  "peak_rss_mb": 413.546875,
+  "train_values": 200000,
+  "test_auctions": 1000000,
+  "rows": [
+    {
+      "bidders": 1,
+      "reserve_rule": "none",
+      "reserve": 0.0,
+      "revenue_mean": 0.0,
+      "revenue_se": 0.0,
+      "welfare_mean": 6.454906351008708,
+      "sold_share": 1.0
+    },
+    {
+      "bidders": 1,
+      "reserve_rule": "myerson (log-normal fit)",
+      "reserve": 12.109705733110957,
+      "revenue_mean": 1.2149909956144886,
+      "revenue_se": 0.003638267931700498,
+      "welfare_mean": 4.764381902529716,
+      "sold_share": 0.100332
+    },
+    {
+      "bidders": 1,
+      "reserve_rule": "empirical (train sample)",
+      "reserve": 17.260906219482422,
+      "revenue_mean": 1.2441143375816346,
+      "revenue_se": 0.004463937762679296,
+      "welfare_mean": 4.356787756830215,
+      "sold_share": 0.072077
+    },
+    {
+      "bidders": 2,
+      "reserve_rule": "none",
+      "reserve": 0.0,
+      "revenue_mean": 1.1352826000695602,
+      "revenue_se": 0.0031792345959103033,
+      "welfare_mean": 11.762206757588306,
+      "sold_share": 1.0
+    },
+    {
+      "bidders": 2,
+      "reserve_rule": "myerson (log-normal fit)",
+      "reserve": 11.861173921535114,
+      "revenue_mean": 2.4173094550517398,
+      "revenue_se": 0.005330385996120003,
+      "welfare_mean": 9.331067262599944,
+      "sold_share": 0.19454
+    },
+    {
+      "bidders": 2,
+      "reserve_rule": "empirical (train sample)",
+      "reserve": 19.36236000061035,
+      "revenue_mean": 2.471325980337143,
+      "revenue_se": 0.0067803927156447836,
+      "welfare_mean": 8.272018232982635,
+      "sold_share": 0.124517
+    },
+    {
+      "bidders": 3,
+      "reserve_rule": "none",
+      "reserve": 0.0,
+      "revenue_mean": 2.3506242397364323,
+      "revenue_se": 0.005014369447435909,
+      "welfare_mean": 16.35668628563269,
+      "sold_share": 1.0
+    },
+    {
+      "bidders": 3,
+      "reserve_rule": "myerson (log-normal fit)",
+      "reserve": 11.959571147019284,
+      "revenue_mean": 3.588733534393443,
+      "revenue_se": 0.006762524569276248,
+      "welfare_mean": 13.532451142189025,
+      "sold_share": 0.274234
+    },
+    {
+      "bidders": 3,
+      "reserve_rule": "empirical (train sample)",
+      "reserve": 20.65070152282715,
+      "revenue_mean": 3.659134388080597,
+      "revenue_se": 0.00857866267559348,
+      "welfare_mean": 11.889467042627334,
+      "sold_share": 0.169554
+    },
+    {
+      "bidders": 5,
+      "reserve_rule": "none",
+      "reserve": 0.0,
+      "revenue_mean": 4.848007207460441,
+      "revenue_se": 0.00815393074745595,
+      "welfare_mean": 24.62836050901135,
+      "sold_share": 1.0
+    },
+    {
+      "bidders": 5,
+      "reserve_rule": "myerson (log-normal fit)",
+      "reserve": 12.169018157619545,
+      "revenue_mean": 5.928548665991502,
+      "revenue_se": 0.009363402608591972,
+      "welfare_mean": 21.58040648826027,
+      "sold_share": 0.410045
+    },
+    {
+      "bidders": 5,
+      "reserve_rule": "empirical (train sample)",
+      "reserve": 19.685138702392578,
+      "revenue_mean": 6.0122959208564755,
+      "revenue_se": 0.011016397668059652,
+      "welfare_mean": 19.534840302682877,
+      "sold_share": 0.278156
+    },
+    {
+      "bidders": 10,
+      "reserve_rule": "none",
+      "reserve": 0.0,
+      "revenue_mean": 10.79506224122715,
+      "revenue_se": 0.01394400239111995,
+      "welfare_mean": 41.19669392750433,
+      "sold_share": 1.0
+    },
+    {
+      "bidders": 10,
+      "reserve_rule": "myerson (log-normal fit)",
+      "reserve": 12.1952170639928,
+      "revenue_mean": 11.435431660627081,
+      "revenue_se": 0.01445043665548377,
+      "welfare_mean": 38.75697986873245,
+      "sold_share": 0.649813
+    },
+    {
+      "bidders": 10,
+      "reserve_rule": "empirical (train sample)",
+      "reserve": 16.01413345336914,
+      "revenue_mean": 11.526012005786896,
+      "revenue_se": 0.015119152723056509,
+      "welfare_mean": 37.38525660243797,
+      "sold_share": 0.552052
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "machine": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "python": "3.12.14",
+    "numpy": "2.5.4",
+    "load_average_1m": 22.4599609375,
+    "date": "2026-11-07T01:13:02"
+  },
+  "peak_rss_mb": 506.953125,
+  "rows": [
+    {
+      "advertisers": 1,
+      "pacer": "none",
+      "auctions": 100000,
+      "rust_auctions_per_s": 121747070.90120094,
+      "python_auctions_per_s": 749909.5402288806,
+      "speedup": 162.3490092738951,
+      "max_abs_value_difference": 0.0
+    },
+    {
+      "advertisers": 1,
+      "pacer": "pid",
+      "auctions": 100000,
+      "rust_auctions_per_s": 41744206.71771939,
+      "python_auctions_per_s": 656381.3546421198,
+      "speedup": 63.59749012139395,
+      "max_abs_value_difference": 0.0
+    },
+    {
+      "advertisers": 1,
+      "pacer": "dual",
+      "auctions": 100000,
+      "rust_auctions_per_s": 45648197.5407577,
+      "python_auctions_per_s": 669059.1106055137,
+      "speedup": 68.22745078449802,
+      "max_abs_value_difference": 0.0
+    },
+    {
+      "advertisers": 10,
+      "pacer": "none",
+      "auctions": 100000,
+      "rust_auctions_per_s": 21377227.923692744,
+      "python_auctions_per_s": 256466.20812159876,
+      "speedup": 83.35300030465271,
+      "max_abs_value_difference": 0.0
+    },
+    {
+      "advertisers": 10,
+      "pacer": "pid",
+      "auctions": 100000,
+      "rust_auctions_per_s": 15811421.55936602,
+      "python_auctions_per_s": 221388.2448302217,
+      "speedup": 71.41942686022688,
+      "max_abs_value_difference": 0.0
+    },
+    {
+      "advertisers": 10,
+      "pacer": "dual",
+      "auctions": 100000,
+      "rust_auctions_per_s": 8727177.775151081,
+      "python_auctions_per_s": 151510.78042685302,
+      "speedup": 57.60103505878529,
+      "max_abs_value_difference": 0.0
+    },
+    {
+      "advertisers": 50,
+      "pacer": "none",
+      "auctions": 100000,
+      "rust_auctions_per_s": 6812279.138617779,
+      "python_auctions_per_s": 51891.283772812174,
+      "speedup": 131.27983436376252,
+      "max_abs_value_difference": 0.0
+    },
+    {
+      "advertisers": 50,
+      "pacer": "pid",
+      "auctions": 100000,
+      "rust_auctions_per_s": 4462949.217882002,
+      "python_auctions_per_s": 59543.228980690285,
+      "speedup": 74.95309364779874,
+      "max_abs_value_difference": 0.0
+    },
+    {
+      "advertisers": 50,
+      "pacer": "dual",
+      "auctions": 100000,
+      "rust_auctions_per_s": 2931849.138311458,
+      "python_auctions_per_s": 40082.28225553499,
+      "speedup": 73.14576349770095,
+      "max_abs_value_difference": 0.0
+    }
+  ],
+  "rust_10m_auctions_10_advertisers_seconds": 0.9463094579987228
+}

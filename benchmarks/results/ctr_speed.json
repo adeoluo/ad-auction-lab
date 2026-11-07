@@ -1,0 +1,37 @@
+{
+  "machine": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "python": "3.12.14",
+    "numpy": "2.5.4",
+    "load_average_1m": 22.4130859375,
+    "date": "2026-11-07T03:01:18"
+  },
+  "peak_rss_mb": 1044.171875,
+  "results": [
+    {
+      "model": "ftrl",
+      "rows": 200000,
+      "bits": 20,
+      "rust_train_rows_per_s": 794077.5063282704,
+      "rust_predict_rows_per_s": 1003631.8933457853,
+      "python_train_rows_per_s": 6226.80179849294,
+      "python_predict_rows_per_s": 29666.57185156092,
+      "speedup_train": 127.525739862229,
+      "max_abs_prediction_difference": 0.0
+    },
+    {
+      "model": "fm",
+      "rows": 200000,
+      "bits": 20,
+      "rust_train_rows_per_s": 57809.69541497435,
+      "rust_predict_rows_per_s": 633231.173986916,
+      "python_train_rows_per_s": 604.1602197853484,
+      "python_predict_rows_per_s": 1797.877710988477,
+      "speedup_train": 95.68603413762247,
+      "max_abs_prediction_difference": 0.0
+    }
+  ],
+  "peak_rss_mb_at_end": 1044.171875
+}

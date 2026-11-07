@@ -4,7 +4,7 @@ Output docs/demo/auction.gif
 Set Shell "bash"
 Set FontSize 15
 Set Width 1300
-Set Height 600
+Set Height 420
 Set Padding 18
 Set Theme "Catppuccin Mocha"
 Set TypingSpeed 22ms
