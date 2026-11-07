@@ -1,0 +1,51 @@
+# Ad Auction Lab
+
+> Position auctions, bid shading, budget pacing, hashed CTR models and off-policy evaluation, measured on Criteo and the Open Bandit Dataset.
+
+Languages: Python, Rust. License: MIT. Source: https://github.com/adeoluo/ad-auction-lab
+
+## Docs
+
+- [README](https://github.com/adeoluo/ad-auction-lab/blob/main/README.md): motivation, architecture, results, quickstart, usage, design decisions, testing, responsible ai, limitations, roadmap
+- [AGENTS.md](https://github.com/adeoluo/ad-auction-lab/blob/main/AGENTS.md): layout, commands and conventions for changing the code
+- [Architecture diagram](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/architecture/architecture.mmd): Mermaid source of the component diagram
+- [Architecture - Ad Auction Lab](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/ARCHITECTURE.md)
+- [Data Card - Ad Auction Lab](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/DATA_CARD.md)
+- [Definition of Done](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/DEFINITION_OF_DONE.md)
+- [Evaluation Report - Ad Auction Lab](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/EVALUATION_REPORT.md)
+- [Model Card - Ad Auction Lab CTR models](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/MODEL_CARD.md)
+- [Threat Model - Ad Auction Lab](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/THREAT_MODEL.md)
+- [ADR-0001: Record architecture decisions](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/adr/0001-record-architecture-decisions.md)
+- [ADR-0002: Hashed CTR models in a Rust core with a Python reference](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/adr/0002-hashed-ctr-models-in-a-rust-core.md)
+- [ADR-0003: FTRL-Proximal and an AdaGrad factorization machine, trained in log order](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/adr/0003-ftrl-proximal-and-adagrad-fm-in-log-order.md)
+- [ADR-0004: Off-policy estimators as per-round terms that match obp exactly](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/adr/0004-ope-as-round-terms-matching-obp.md)
+- [ADR-0005: Closed-form position auctions with numeric incentive checks](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/adr/0005-vcg-as-an-affine-maximizer-with-numeric-incentive-checks.md)
+- [ADR-0006: Budget pacing in a Rust simulator on real prices and CTRs](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/adr/0006-pacing-simulator-on-real-prices-and-ctrs.md)
+- [ADR-0007: Datasets within the disk budget](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/adr/0007-datasets-within-the-disk-budget.md)
+- [ADR-NNNN: <short title>](https://github.com/adeoluo/ad-auction-lab/blob/main/docs/adr/template.md)
+- [Changelog](https://github.com/adeoluo/ad-auction-lab/blob/main/CHANGELOG.md): release history
+
+## Source
+
+- [rust/src/fm.rs](https://github.com/adeoluo/ad-auction-lab/blob/main/rust/src/fm.rs): Second-order factorization machine (Rendle, 2010) on hashed binary features, trained with AdaGrad on the log loss.
+- [rust/src/ftrl.rs](https://github.com/adeoluo/ad-auction-lab/blob/main/rust/src/ftrl.rs): Logistic regression on hashed features trained with FTRL-Proximal (McMahan et al., 2013).
+- [rust/src/hashing.rs](https://github.com/adeoluo/ad-auction-lab/blob/main/rust/src/hashing.rs): Feature hashing shared by every model.
+- [rust/src/lib.rs](https://github.com/adeoluo/ad-auction-lab/blob/main/rust/src/lib.rs): Rust core of ad-auction-lab.
+- [rust/src/metrics.rs](https://github.com/adeoluo/ad-auction-lab/blob/main/rust/src/metrics.rs): Small numeric helpers shared by the learners.
+- [rust/src/pacing.rs](https://github.com/adeoluo/ad-auction-lab/blob/main/rust/src/pacing.rs): Multi-advertiser budget pacing simulator: repeated single-slot second-price auctions on expected cost per impression (eCPM = bid per click x predicted CTR).
+- [rust/src/python.rs](https://github.com/adeoluo/ad-auction-lab/blob/main/rust/src/python.rs): PyO3 bindings, built by maturin into the `ad_auction_lab_rs` extension module.
+- [src/ad_auction_lab/__init__.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/__init__.py): Ad auctions, bidding, budget pacing, hashed CTR models and off-policy evaluation.
+- [src/ad_auction_lab/auctions.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/auctions.py): Position auctions for sponsored search and display slots: GSP, VCG and first price.
+- [src/ad_auction_lab/backend.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/backend.py): The Rust backend, compiled into the package on install and used by default.
+- [src/ad_auction_lab/bidding.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/bidding.py): Bid shading for first-price auctions.
+- [src/ad_auction_lab/calibration.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/calibration.py): Post-hoc calibration of click probabilities: Platt scaling and isotonic regression.
+- [src/ad_auction_lab/cli.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/cli.py): Command line interface: ``python -m ad_auction_lab <command>``.
+- [src/ad_auction_lab/ctr.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/ctr.py): Hashed click-through-rate models: FTRL-Proximal logistic regression and a factorization machine.
+- [src/ad_auction_lab/ctr_reference.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/ctr_reference.py): Readable numpy reference implementations of the hashed CTR learners.
+- [src/ad_auction_lab/data.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/data.py): Tabular click data as two categorical blocks, and the Criteo loaders.
+- [src/ad_auction_lab/hashing.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/hashing.py): Feature hashing shared with the Rust core.
+- [src/ad_auction_lab/metrics.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/metrics.py): Click model metrics: log loss, ROC AUC, normalized entropy, calibration and significance tests.
+- [src/ad_auction_lab/obd.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/obd.py): The Open Bandit Dataset (Saito et al., 2021) as bandit logs, and its contextual reward model.
+- [src/ad_auction_lab/ope.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/ope.py): Off-policy estimators for (item, position) bandit logs: IPS, SNIPS, DM, DR, SNDR, Switch-DR.
+- [src/ad_auction_lab/pacing.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/pacing.py): Budget pacing in a repeated multi-advertiser second-price auction market.
+- [src/ad_auction_lab/service.py](https://github.com/adeoluo/ad-auction-lab/blob/main/src/ad_auction_lab/service.py): A standard-library HTTP service for auctions, bid shading, CTR prediction and OPE.
