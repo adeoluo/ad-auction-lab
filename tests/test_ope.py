@@ -12,6 +12,7 @@ from ad_auction_lab.ope import (
     BanditLog,
     RoundTerms,
     bootstrap,
+    bootstrap_many,
     empirical_action_dist,
     estimate,
     importance_weights,
@@ -163,6 +164,22 @@ def test_bootstrap_in_column_blocks(monkeypatch: pytest.MonkeyPatch) -> None:
     a = bootstrap(small, n_boot=20, seed=5, chunk=1)[1]
     b = bootstrap(small, n_boot=20, seed=5, chunk=6)[1]
     np.testing.assert_allclose(a, b, rtol=1e-12)
+
+
+def test_bootstrap_many_shares_weights_and_matches_bootstrap() -> None:
+    log, _ = simulated(5_000, seed=11)
+    pi = target_policy(5, 2)
+    w = importance_weights(log, pi)
+    terms = [round_terms(e, log.reward, w) for e in ("ips", "snips")]
+    many = bootstrap_many(terms, n_boot=40, seed=6, chunk=3)
+    for t, (ci, reps) in zip(terms, many, strict=True):
+        ci1, reps1 = bootstrap(t, n_boot=40, seed=6, chunk=3)
+        np.testing.assert_allclose(reps, reps1, rtol=1e-12)
+        assert ci.estimate == ci1.estimate and ci.low == pytest.approx(ci1.low, rel=1e-12)
+    assert bootstrap_many([], n_boot=10) == []
+    short = RoundTerms(np.ones(3), np.zeros(3), np.ones(3))
+    with pytest.raises(ValueError, match="same rounds"):
+        bootstrap_many([terms[0], short], n_boot=10)
 
 
 def test_bootstrap_of_ratio_estimators() -> None:
