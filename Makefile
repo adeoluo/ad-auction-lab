@@ -1,4 +1,4 @@
-.PHONY: help setup lint format type test coverage rust-check rust-develop parity validation data evaluation report demos diagram docker-build docker-up clean all
+.PHONY: help setup lint format type test coverage rust-check rust-develop parity validation data evaluation report demos diagram docker-build docker-up clean all changelog cut-release
 
 DATA ?= ../.bench-data/ad-auction-lab
 
@@ -45,13 +45,14 @@ validation: ## Tests against obp and scikit-learn (obp is installed without its 
 data: ## Stream Criteo (1 row in 4), the Open Bandit Dataset and Criteo Attribution into $(DATA)
 	scripts/download_data.sh $(DATA)
 
-evaluation: ## Every benchmark on the full data (about 2 hours on an M1; needs `make data validation`)
+evaluation: ## Every benchmark on the full data (several hours on an M1; needs `make data validation`)
 	uv run --no-sync python benchmarks/ctr_criteo.py sweep
 	uv run --no-sync python benchmarks/ctr_criteo.py sweep-fm
 	uv run --no-sync python benchmarks/ctr_criteo.py final
 	uv run --no-sync python benchmarks/ctr_criteo.py ablate
-	uv run --no-sync python benchmarks/ctr_criteo.py reference
-	uv run --no-sync python benchmarks/ctr_criteo.py speed
+	uv run --no-sync python benchmarks/ctr_criteo.py reference --which sklearn
+	uv run --no-sync python benchmarks/ctr_criteo.py reference --which torch --bits 20
+	uv run --no-sync python benchmarks/ctr_criteo.py speed --rows 200000
 	uv run --no-sync python benchmarks/ope_obd.py main
 	uv run --no-sync python benchmarks/ope_obd.py curve
 	uv run --no-sync python benchmarks/ope_obd.py ablate
@@ -84,3 +85,9 @@ clean: ## Remove caches and artifacts
 	find . -type d -name __pycache__ -exec rm -rf {} +
 
 all: lint type coverage ## Full local gate (mirror of continuous integration)
+
+changelog: ## Regenerate CHANGELOG.md from Conventional Commits (git-cliff)
+	git cliff --output CHANGELOG.md && perl -0pi -e 's/\n+\z/\n/' CHANGELOG.md
+
+cut-release: ## Cut a release locally: version bump, changelog, tag, GitHub release (RELEASE_VERSION=vX.Y.Z optional)
+	scripts/release.sh $(RELEASE_VERSION)
