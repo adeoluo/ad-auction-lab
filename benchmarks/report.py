@@ -160,10 +160,12 @@ def ctr() -> None:
             rows.append(["constant base rate", f"{c['logloss']:.5f}", f"{c['auc']:.5f}", "", ""])
         if "sklearn_sgd_logistic" in r:
             s = r["sklearn_sgd_logistic"]
-            sec = next(x["seconds"] for x in s["runs"] if x["alpha_l2"] == s["chosen_alpha_l2"])
+            ch = s["chosen"]
+            sec = next(x["seconds"] for x in s["runs"] if all(x.get(k) == v for k, v in ch.items()))
+            lr = ch["learning_rate"] + (f" {ch['eta0']}" if "eta0" in ch else "")
             rows.append(
                 [
-                    f"scikit-learn SGDClassifier (alpha {s['chosen_alpha_l2']})",
+                    f"scikit-learn SGDClassifier (alpha {ch['alpha']}, {lr})",
                     f"{s['test']['logloss']:.5f}",
                     f"{s['test']['auc']:.5f}",
                     f"{s['test']['normalized_entropy']:.4f}",

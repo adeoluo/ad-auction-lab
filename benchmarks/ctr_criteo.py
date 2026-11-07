@@ -229,14 +229,17 @@ def cmd_speed(a: argparse.Namespace) -> None:
     sub = t.take(np.sort(train[: a.rows]))
     held = t.take(np.sort(test[:20_000]))
     out = []
+    # 2^20 buckets keeps both backends' state under 1 GB at k = 32; speed per row does not
+    # depend on the table size, only the memory does.
+    bits = a.bits
     for kind in ("ftrl", "fm"):
-        row: dict[str, Any] = {"model": kind, "rows": len(sub)}
+        row: dict[str, Any] = {"model": kind, "rows": len(sub), "bits": bits}
         preds = {}
         for backend in ("rust", "python"):
             m: Any = (
-                FTRLProximal(**FTRL_BEST, backend=backend)
+                FTRLProximal(**{**FTRL_BEST, "bits": bits}, backend=backend)
                 if kind == "ftrl"
-                else FactorizationMachine(**FM_BEST, backend=backend)
+                else FactorizationMachine(**{**FM_BEST, "bits": bits}, backend=backend)
             )
             t0 = time.perf_counter()
             m.partial_fit(sub)
@@ -244,6 +247,7 @@ def cmd_speed(a: argparse.Namespace) -> None:
             t0 = time.perf_counter()
             preds[backend] = m.predict_proba(held)
             row[f"{backend}_predict_rows_per_s"] = len(held) / (time.perf_counter() - t0)
+            del m
         row["speedup_train"] = row["rust_train_rows_per_s"] / row["python_train_rows_per_s"]
         row["max_abs_prediction_difference"] = float(
             np.max(np.abs(preds["rust"].astype(np.float64) - preds["python"]))
@@ -271,14 +275,24 @@ def _chunks(rows: Any, size: int = 500_000) -> Any:
 
 
 def ref_sklearn(t: Table, train: Any, valid: Any, test: Any, base: float, bits: int) -> dict:
-    """Logistic regression with scikit-learn's SGDClassifier on the same hashed features."""
+    """Logistic regression with scikit-learn's SGDClassifier on the same hashed features.
+
+    The default "optimal" step size diverges at small L2 on these features (validation logloss
+    5.1 at alpha 1e-7, 0.70 at 1e-6), so the grid also covers constant step sizes.
+    """
 
     from sklearn.linear_model import SGDClassifier
 
+    grid: list[dict[str, Any]] = [{"alpha": 1e-5, "learning_rate": "optimal"}]
+    grid += [
+        {"alpha": l2, "learning_rate": "constant", "eta0": eta}
+        for l2 in (1e-7, 1e-6)
+        for eta in (0.005, 0.02, 0.05)
+    ]
     runs = []
-    best: tuple[float, Any, float] | None = None
-    for l2 in (1e-7, 1e-6, 1e-5):
-        clf = SGDClassifier(loss="log_loss", alpha=l2, random_state=0)
+    best: tuple[float, Any, dict] | None = None
+    for cfg in grid:
+        clf = SGDClassifier(loss="log_loss", random_state=0, **cfg)
         t0 = time.perf_counter()
         for c in _chunks(train):
             clf.partial_fit(_hashed_csr(t, c, bits), t.labels[c], classes=[0, 1])
@@ -287,14 +301,14 @@ def ref_sklearn(t: Table, train: Any, valid: Any, test: Any, base: float, bits: 
             [clf.predict_proba(_hashed_csr(t, c, bits))[:, 1] for c in _chunks(valid)]
         )
         s = summary(t.labels[valid], pv, base)
-        runs.append({"alpha_l2": l2, "seconds": sec, "rows_per_s": len(train) / sec, "valid": s})
-        print("sklearn", l2, s, flush=True)
+        runs.append({**cfg, "seconds": sec, "rows_per_s": len(train) / sec, "valid": s})
+        print("sklearn", cfg, s, flush=True)
         if best is None or s["logloss"] < best[0]:
-            best = (s["logloss"], clf, l2)
+            best = (s["logloss"], clf, cfg)
     assert best is not None
     clf = best[1]
     pt = np.concatenate([clf.predict_proba(_hashed_csr(t, c, bits))[:, 1] for c in _chunks(test)])
-    return {"runs": runs, "chosen_alpha_l2": best[2], "test": summary(t.labels[test], pt, base)}
+    return {"runs": runs, "chosen": best[2], "test": summary(t.labels[test], pt, base)}
 
 
 def ref_torch_fm(
@@ -392,6 +406,7 @@ def main() -> None:
     sub.add_parser("ablate").set_defaults(func=cmd_ablate)
     s = sub.add_parser("speed")
     s.add_argument("--rows", type=int, default=20_000)
+    s.add_argument("--bits", type=int, default=20)
     s.set_defaults(func=cmd_speed)
     s = sub.add_parser("reference")
     s.add_argument("--which", choices=["all", "sklearn", "torch"], default="all")
