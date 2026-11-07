@@ -36,6 +36,16 @@ def table(header: list[str], rows: list[list[Any]]) -> None:
     print()
 
 
+# Zhu et al., "Open Benchmarking for Click-Through Rate Prediction" (CIKM 2021), BARS leaderboard
+# https://openbenchmark.github.io/BARS/CTR/leaderboard/criteo_x4.html (full Criteo, random 8:1:1).
+PUBLISHED = [
+    ("LR", "0.4568", "0.7934"),
+    ("FM", "0.4431", "0.8086"),
+    ("FFM", "0.4407", "0.8113"),
+    ("DeepFM", "0.4376", "0.8143"),
+]
+
+
 def ctr() -> None:
     if have("ctr_sweep"):
         print("### CTR sweep (validation log loss, best per model)\n")
@@ -125,6 +135,20 @@ def ctr() -> None:
         rel = f["fm"][0]["reliability"]["bins"]
         print("FM reliability (20 bins, seed 0): mean prediction / mean label")
         print(", ".join(f"{b['mean_prediction']:.3f}/{b['mean_label']:.3f}" for b in rel), "\n")
+    if have("ctr_final"):
+        f = read("ctr_final")
+        print("### Against published Criteo baselines (quoted, not rerun)\n")
+        rows = [
+            [
+                f"This repo: {names[k]} (1 in 4 sample, {f['rows']['train']:,} train rows)",
+                ms([r["test"]["logloss"] for r in f[k]]),
+                ms([r["test"]["auc"] for r in f[k]]),
+            ]
+            for k in ("ftrl", "fm")
+        ]
+        bars = "BARS Criteo_x4_001, 36.7M train rows"
+        rows += [[f"{m} ({bars})", ll, auc] for m, ll, auc in PUBLISHED]
+        table(["Model", "Test logloss", "Test AUC"], rows)
     for which in ("all", "sklearn", "torch"):
         if not have(f"ctr_reference_{which}"):
             continue
@@ -164,7 +188,7 @@ def ctr() -> None:
         table(["Model", "Test logloss", "Test AUC", "NE", "Train s"], rows)
     if have("ctr_ablation"):
         a = read("ctr_ablation")
-        print("### CTR ablations (test split, 1 epoch)\n")
+        print("### CTR ablations (test split, chosen passes: FTRL 2, FM 1)\n")
         for key, col in (
             ("bits", "bits"),
             ("fields", "fields"),
