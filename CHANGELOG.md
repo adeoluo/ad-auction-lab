@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The file is generated
 from Conventional Commits by [git-cliff](https://git-cliff.org) when a release is cut
 with `make cut-release`.
 
-## Unreleased
+## [0.1.0] 2026-11-07
 
 ### Features
 
@@ -14,13 +14,7 @@ with `make cut-release`.
 - Command line interface and HTTP service (#4)
 - Real data benchmark harness for CTR, OPE and markets (#5)
 - Criteo CTR results, ablations and reference libraries (#6)
-- Auction incentive, reserve price and OPE learning curve results
-- OPE on the full Open Bandit Dataset, estimator ablations and pacing results
-- Agreement with obp 0.5.7 on 200k-round samples of every setting
-- Rust pacing simulator speed against the Python reference
-- First-price bid shading on a time split of Criteo market prices
-- Scikit-learn logistic regression reference on the same hashed features
-- Rust CTR core speed against the Python reference on 200k rows
+- Off-policy evaluation, market and reference library results (#9)
 
 ### Performance
 
@@ -28,10 +22,7 @@ with `make cut-release`.
 - Share bootstrap weights across estimators (#8)
 - Build the bid shading envelope once per landscape (#10)
 
-### Documentation
-
-- README and evaluation report with the measured results
-
 ### Maintenance
 
 - Scaffold project
+- Release tooling, changelog and agent notes (#11)
