@@ -16,6 +16,7 @@ models with user, item and user-by-item features.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import time
 from pathlib import Path
@@ -24,7 +25,7 @@ from typing import Any
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import DATA, write
+from common import DATA, RESULTS, write
 
 from ad_auction_lab.ctr import FactorizationMachine, FTRLProximal
 from ad_auction_lab.obd import CAMPAIGNS, cross_fit_model_terms, load_obd
@@ -33,6 +34,7 @@ from ad_auction_lab.ope import (
     NEEDS_MODEL,
     BanditLog,
     bootstrap,
+    bootstrap_many,
     importance_weights,
     item_position_model,
     marginal_action_dist,
@@ -69,36 +71,47 @@ def evaluate(
 ) -> list[dict[str, Any]]:
     iw = importance_weights(log, pi)
     tau = float(np.quantile(iw, TAU_QUANTILE))
-    rows = []
+    keys, all_terms = [], []
     for model, terms in models.items():
         for est in ESTIMATORS:
             if (est in NEEDS_MODEL) != (terms is not None):
                 continue
             q_pi, q_f = terms if terms is not None else (None, None)
-            t = round_terms(est, log.reward, iw, q_pi, q_f, tau=tau)
-            ci, reps = bootstrap(t, n_boot=n_boot, seed=seed)
-            re_reps = np.abs(reps - truth) / truth
-            rows.append(
-                {
-                    "estimator": est,
-                    "reward_model": model,
-                    "estimate": ci.estimate,
-                    "ci_low": ci.low,
-                    "ci_high": ci.high,
-                    "std": ci.std,
-                    "relative_error": relative_error(ci.estimate, truth),
-                    "bootstrap_relative_error_mean": float(re_reps.mean()),
-                    "bootstrap_relative_error_std": float(re_reps.std(ddof=1)),
-                    "covers_truth": bool(ci.low <= truth <= ci.high),
-                }
-            )
+            keys.append((est, model))
+            all_terms.append(round_terms(est, log.reward, iw, q_pi, q_f, tau=tau))
+    rows = []
+    # One set of Poisson weights for every estimator: the same draws as separate calls with the
+    # same seed, at the cost of one.
+    for (est, model), (ci, reps) in zip(
+        keys, bootstrap_many(all_terms, n_boot=n_boot, seed=seed), strict=True
+    ):
+        re_reps = np.abs(reps - truth) / truth
+        rows.append(
+            {
+                "estimator": est,
+                "reward_model": model,
+                "estimate": ci.estimate,
+                "ci_low": ci.low,
+                "ci_high": ci.high,
+                "std": ci.std,
+                "relative_error": relative_error(ci.estimate, truth),
+                "bootstrap_relative_error_mean": float(re_reps.mean()),
+                "bootstrap_relative_error_std": float(re_reps.std(ddof=1)),
+                "covers_truth": bool(ci.low <= truth <= ci.high),
+            }
+        )
     return rows
 
 
 def cmd_main(a: argparse.Namespace) -> None:
-    out = []
+    out: list[dict[str, Any]] = []
+    prev = RESULTS / "ope_obd.json"
+    if a.resume and prev.exists():
+        out = json.loads(prev.read_text())["settings"]
     for campaign in CAMPAIGNS:
         for target in ("bts", "random"):
+            if any(s["campaign"] == campaign and s["target"] == target for s in out):
+                continue
             t0 = time.perf_counter()
             obd, log, pi, truth, n_target = setting(campaign, target)
             iw = importance_weights(log, pi)
@@ -134,14 +147,17 @@ def cmd_main(a: argparse.Namespace) -> None:
                 "estimates": rows,
             }
             out.append(res)
-            print(campaign, target, f"truth {truth:.6f}", flush=True)
+            # Written after every setting so a stopped run keeps what it finished.
+            write(
+                "ope_obd", {"n_boot": a.boot, "switch_tau_quantile": TAU_QUANTILE, "settings": out}
+            )
+            print(campaign, target, f"truth {truth:.6f}", f"{res['seconds']:.0f} s", flush=True)
             for r in rows:
                 print(
                     f"  {r['estimator']:<10} {r['reward_model']:<14} {r['estimate']:.6f} "
                     f"RE {r['relative_error']:.4f} covers {r['covers_truth']}",
                     flush=True,
                 )
-    write("ope_obd", {"n_boot": a.boot, "switch_tau_quantile": TAU_QUANTILE, "settings": out})
 
 
 def cmd_curve(a: argparse.Namespace) -> None:
@@ -293,6 +309,7 @@ def main() -> None:
     s = sub.add_parser("main")
     s.add_argument("--boot", type=int, default=200)
     s.add_argument("--no-models", action="store_true")
+    s.add_argument("--resume", action="store_true", help="keep settings already in the results")
     s.set_defaults(func=cmd_main)
     s = sub.add_parser("curve")
     s.add_argument("--repeats", type=int, default=30)
