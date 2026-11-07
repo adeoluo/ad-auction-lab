@@ -235,6 +235,9 @@ class Interval:
         return {"estimate": self.estimate, "low": self.low, "high": self.high, "std": self.std}
 
 
+MAX_COUNTS = 4_000_000
+
+
 def bootstrap(
     terms: RoundTerms,
     n_boot: int = 200,
@@ -246,7 +249,8 @@ def bootstrap(
 
     Each replicate weights round ``i`` by an independent Poisson(1) count (Hanley and MacGibbon,
     2006; the standard large-scale approximation of resampling with replacement). Returns the
-    interval and the replicate estimates. At most about 30 million counts are held at a time.
+    interval and the replicate estimates. At most ``MAX_COUNTS`` counts are held at a time; logs
+    longer than that draw each replicate's counts in column blocks.
     """
 
     if n_boot < 2 or not 0 < alpha < 1:
@@ -254,13 +258,19 @@ def bootstrap(
     rng = np.random.default_rng(seed)
     n = terms.a.size
     reps = np.empty(n_boot)
-    M = np.stack([terms.a, terms.b, terms.c, np.ones(n)]).T  # (n, 4)
-    chunk = max(1, min(chunk, 30_000_000 // max(n, 1)))
+    M = (terms.a, terms.b, terms.c)
+    chunk = max(1, min(chunk, MAX_COUNTS // max(n, 1)))
+    block = n if n * chunk <= MAX_COUNTS else MAX_COUNTS
     done = 0
     while done < n_boot:
         m = min(chunk, n_boot - done)
-        W = rng.poisson(1.0, size=(m, n)).astype(np.float64)
-        S = W @ M
+        S = np.zeros((m, 4))
+        for lo in range(0, n, block):
+            hi = min(n, lo + block)
+            W = rng.poisson(1.0, size=(m, hi - lo)).astype(np.float64)
+            for j, col in enumerate(M):
+                S[:, j] += W @ col[lo:hi]
+            S[:, 3] += W.sum(axis=1)
         ratio = np.divide(S[:, 1], S[:, 2], out=np.zeros(m), where=S[:, 2] > 0)
         reps[done : done + m] = S[:, 0] / S[:, 3] + ratio
         done += m

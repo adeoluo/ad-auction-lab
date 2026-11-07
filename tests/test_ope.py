@@ -146,6 +146,25 @@ def test_bootstrap_matches_analytic_standard_error() -> None:
     assert ci.std == pytest.approx(2.0 / np.sqrt(50_000), rel=0.1)
 
 
+def test_bootstrap_in_column_blocks(monkeypatch: pytest.MonkeyPatch) -> None:
+    import ad_auction_lab.ope as ope
+
+    rng = np.random.default_rng(3)
+    x = rng.normal(1.0, 2.0, 20_000)
+    t = RoundTerms(x, np.zeros_like(x), np.ones_like(x))
+    whole, reps_whole = bootstrap(t, n_boot=300, seed=4)
+    monkeypatch.setattr(ope, "MAX_COUNTS", 3_000)
+    blocked, reps_blocked = bootstrap(t, n_boot=300, seed=4)
+    assert blocked.estimate == whole.estimate
+    assert not np.array_equal(reps_whole, reps_blocked)
+    assert blocked.std == pytest.approx(2.0 / np.sqrt(20_000), rel=0.15)
+    # Without column blocks the replicate chunk size does not change the draws (only BLAS rounding).
+    small = RoundTerms(x[:500], np.zeros(500), np.ones(500))
+    a = bootstrap(small, n_boot=20, seed=5, chunk=1)[1]
+    b = bootstrap(small, n_boot=20, seed=5, chunk=6)[1]
+    np.testing.assert_allclose(a, b, rtol=1e-12)
+
+
 def test_bootstrap_of_ratio_estimators() -> None:
     log, _ = simulated(20_000, seed=10)
     pi = target_policy(5, 2)
