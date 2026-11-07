@@ -112,7 +112,17 @@ nonzero weights (3,722,562 to 1,775,280) for +0.00014 logloss; L1 = 16 keeps 48,
 training set between 3M and 9.17M rows, which suggests (untested) that most of the 0.0095 AUC gap
 to the BARS FM is the 4x smaller sample.
 
-SPEED_TABLE
+Rust core against the Python reference, both on the same 200,000 training rows and 20,000
+prediction rows at 2^20 buckets, back to back in one process
+([ctr_speed.json](benchmarks/results/ctr_speed.json)); predictions are identical:
+
+| Model | Rust train rows/s | Python train rows/s | Speedup | Rust predict rows/s | Python predict rows/s |
+|---|---:|---:|---:|---:|---:|
+| FTRL-Proximal | 794,078 | 6,227 | 128x | 1,003,632 | 29,667 |
+| Factorization machine (k 32) | 57,810 | 604 | 96x | 633,231 | 1,798 |
+
+On the full 9.17M-row training split FTRL trained 0.7M to 2.9M rows per second and the FM 37k to
+290k across the runs, depending on machine load.
 
 ### Off-policy evaluation on the Open Bandit Dataset
 
@@ -283,7 +293,7 @@ make evaluation      # every benchmark (several hours on an M1); make report pri
 ```bash
 D=../.bench-data/ad-auction-lab
 python -m ad_auction_lab train-ctr --data $D --model fm --k 32 --lr 0.01 --out fm.npz
-python -m ad_auction_lab ope --data $D --campaign men --target bts --boot 200
+python -m ad_auction_lab ope --data $D --campaign all --target bts --boot 200
 python -m ad_auction_lab pace --data $D --horizon 2000000 --advertisers 10 --budget-share 0.3
 ```
 
@@ -354,8 +364,8 @@ and calibration.
   <img src="docs/demo/ctr.gif" alt="Training the factorization machine on Criteo" width="860">
 </p>
 
-Off-policy estimates of the Bernoulli Thompson sampling policy from the uniform random log of
-the men campaign, against the policy's on-policy click rate.
+Off-policy estimates of the Bernoulli Thompson sampling policy from the 1.37M-round uniform
+random log, against the click rate the policy achieved in its own 12.36M rounds.
 
 <p align="center">
   <img src="docs/demo/ope.gif" alt="Off-policy evaluation on the Open Bandit Dataset" width="860">
@@ -370,7 +380,7 @@ Ten advertisers pacing their budgets over 2M auctions priced by the Criteo marke
 ## Design decisions
 
 - **Hashed CTR models in a Rust core.** Online learning is a sequential loop over rows that numpy
-  cannot vectorize; the Rust FTRL and FM train TRAIN_SPEEDUP faster than the Python reference and
+  cannot vectorize; the Rust FTRL and FM train 128x and 96x faster than the Python reference and
   give identical predictions. ([ADR-0002](docs/adr/0002-hashed-ctr-models-in-a-rust-core.md))
 - **FTRL-Proximal and an AdaGrad factorization machine, trained in log order.** Per-coordinate
   learning rates and L1 sparsity are what production CTR systems use, and training in time order
@@ -392,7 +402,7 @@ Ten advertisers pacing their budgets over 2M auctions priced by the Criteo marke
 ```bash
 make lint        # ruff format --check and ruff check
 make type        # mypy src (strict)
-make coverage    # pytest with an 80% gate (TEST_COUNT tests, COVERAGE line coverage)
+make coverage    # pytest with an 80% gate (192 tests, 98% branch coverage locally)
 make rust-check  # cargo fmt, clippy and the Rust unit tests
 make parity      # Rust core against the numpy reference, extension required
 make validation  # against obp 0.5.7 and scikit-learn
