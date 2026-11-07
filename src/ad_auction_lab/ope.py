@@ -253,29 +253,55 @@ def bootstrap(
     longer than that draw each replicate's counts in column blocks.
     """
 
+    return bootstrap_many([terms], n_boot, alpha, seed, chunk)[0]
+
+
+def bootstrap_many(
+    terms: list[RoundTerms],
+    n_boot: int = 200,
+    alpha: float = 0.05,
+    seed: int = 0,
+    chunk: int = 8,
+) -> list[tuple[Interval, F64]]:
+    """:func:`bootstrap` for several estimators on the same log with shared replicate weights.
+
+    Drawing the Poisson counts dominates the cost, so sharing them makes ``k`` estimators cost
+    about as much as one, and the replicates of different estimators are paired. Each result
+    equals ``bootstrap(t, n_boot, alpha, seed)`` for the same seed.
+    """
+
     if n_boot < 2 or not 0 < alpha < 1:
         raise ValueError("n_boot must be at least 2 and alpha in (0, 1)")
+    if not terms:
+        return []
+    n = terms[0].a.size
+    if any(t.a.size != n or t.b.size != n or t.c.size != n for t in terms):
+        raise ValueError("all terms must cover the same rounds")
     rng = np.random.default_rng(seed)
-    n = terms.a.size
-    reps = np.empty(n_boot)
-    M = (terms.a, terms.b, terms.c)
+    reps = np.empty((len(terms), n_boot))
     chunk = max(1, min(chunk, MAX_COUNTS // max(n, 1)))
     block = n if n * chunk <= MAX_COUNTS else MAX_COUNTS
     done = 0
     while done < n_boot:
         m = min(chunk, n_boot - done)
-        S = np.zeros((m, 4))
+        S = np.zeros((len(terms), m, 3))
+        total = np.zeros(m)
         for lo in range(0, n, block):
             hi = min(n, lo + block)
             W = rng.poisson(1.0, size=(m, hi - lo)).astype(np.float64)
-            for j, col in enumerate(M):
-                S[:, j] += W @ col[lo:hi]
-            S[:, 3] += W.sum(axis=1)
-        ratio = np.divide(S[:, 1], S[:, 2], out=np.zeros(m), where=S[:, 2] > 0)
-        reps[done : done + m] = S[:, 0] / S[:, 3] + ratio
+            total += W.sum(axis=1)
+            for i, t in enumerate(terms):
+                for j, col in enumerate((t.a, t.b, t.c)):
+                    S[i, :, j] += W @ col[lo:hi]
+        for i in range(len(terms)):
+            ratio = np.divide(S[i, :, 1], S[i, :, 2], out=np.zeros(m), where=S[i, :, 2] > 0)
+            reps[i, done : done + m] = S[i, :, 0] / total + ratio
         done += m
-    lo, hi = np.percentile(reps, [100 * alpha / 2, 100 * (1 - alpha / 2)])
-    return Interval(terms.value(), float(lo), float(hi), float(reps.std(ddof=1))), reps
+    out = []
+    for t, r in zip(terms, reps, strict=True):
+        lo_, hi_ = np.percentile(r, [100 * alpha / 2, 100 * (1 - alpha / 2)])
+        out.append((Interval(t.value(), float(lo_), float(hi_), float(r.std(ddof=1))), r))
+    return out
 
 
 def relative_error(estimate_: float, truth: float) -> float:
