@@ -179,13 +179,19 @@ def cmd_ablate(a: argparse.Namespace) -> None:
     t, train, _valid, test, base = load()
     ev = {"test": test}
     out: dict[str, Any] = {"bits": [], "fields": [], "train_size": [], "fm_k": [], "l1": []}
+
+    def save() -> None:  # after every group, so a stopped run keeps what it finished
+        write("ctr_ablation", {"base_rate": base, "test_rows": len(test), **out})
+
     for l1 in (0.0, 1.0, 4.0, 16.0):
         m = FTRLProximal(**{**FTRL_BEST, "l1": l1})
         r = run(m, t, train, ev, base, epochs=_epochs(m))
         r["nonzero_weights"] = int(np.count_nonzero(m.weights()))
         out["l1"].append({"model": "ftrl", "l1": l1, **r})
+    save()
+    # The FM stops at 2^22 buckets: at 2^24 its factors and AdaGrad state need 4 GB at k = 32.
     for bits in (16, 18, 20, 22, 24):
-        for kind in ("ftrl", "fm"):
+        for kind in ("ftrl", "fm") if bits <= 22 else ("ftrl",):
             m: Any = (
                 FTRLProximal(**{**FTRL_BEST, "bits": bits})
                 if kind == "ftrl"
@@ -193,6 +199,7 @@ def cmd_ablate(a: argparse.Namespace) -> None:
             )
             r = run(m, t, train, ev, base, epochs=_epochs(m))
             out["bits"].append({"model": kind, "bits": bits, **r})
+    save()
     n = len(t)
     groups = {
         "integer features only (13)": Table(t.small, np.zeros((n, 0), np.uint32), t.labels),
@@ -203,16 +210,18 @@ def cmd_ablate(a: argparse.Namespace) -> None:
             m = FTRLProximal(**FTRL_BEST) if kind == "ftrl" else FactorizationMachine(**FM_BEST)
             r = run(m, tab, train, ev, base, epochs=_epochs(m))
             out["fields"].append({"model": kind, "fields": name, **r})
+    save()
     for size in (100_000, 300_000, 1_000_000, 3_000_000, len(train)):
         for kind in ("ftrl", "fm"):
             m = FTRLProximal(**FTRL_BEST) if kind == "ftrl" else FactorizationMachine(**FM_BEST)
             r = run(m, t, train[:size], ev, base, epochs=_epochs(m))
             out["train_size"].append({"model": kind, "train_rows": size, **r})
+    save()
     for k in (1, 2, 4, 8, 16, 32):
         m = FactorizationMachine(**{**FM_BEST, "k": k})
         r = run(m, t, train, ev, base, epochs=_epochs(m))
         out["fm_k"].append({"k": k, **r})
-    write("ctr_ablation", {"base_rate": base, "test_rows": len(test), **out})
+    save()
 
 
 def cmd_speed(a: argparse.Namespace) -> None:
