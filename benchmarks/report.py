@@ -274,7 +274,10 @@ def ope() -> None:
                 rows,
             )
         # Compact summary: relative error per estimator with the item-position reward model.
-        print("### OPE summary (relative error; DM and the DR family use the item-position reward model)\n")
+        print(
+            "### OPE summary (relative error; DM and the DR family use the item-position"
+            " reward model)\n"
+        )
         rows = []
         for s in r["settings"]:
             per: dict[str, float] = {}

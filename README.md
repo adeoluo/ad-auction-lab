@@ -54,7 +54,19 @@ raw JSON in [benchmarks/results/](benchmarks/results/); `make report` prints the
 full walkthrough, with threats to validity, is in
 [docs/EVALUATION_REPORT.md](docs/EVALUATION_REPORT.md).
 
-HEADLINE
+### Headline
+
+| Component | Measured on | This repo | Compared with | Outcome |
+|---|---|---:|---:|---|
+| CTR, factorization machine | Criteo, 1.15M test rows, 3 splits | logloss 0.4518, AUC 0.7991 | PyTorch FM, same features (2^20): 0.4532 / 0.7975 | win (ours at 2^20: 0.4523 / 0.7985) |
+| CTR, FTRL logistic regression | same, 1 pass | logloss 0.4602, AUC 0.7893 | scikit-learn SGD: 0.4675 / 0.7805 | win |
+| CTR against published | Criteo | FM 0.4518 / 0.7991 on 9.17M rows | BARS FM 0.4431 / 0.8086 on 36.7M rows (quoted) | loss |
+| Off-policy estimators | Open Bandit, 6 settings | max abs difference 6.1e-18 | obp 0.5.7 | tie (identical) |
+| Off-policy accuracy | Open Bandit, 13.7M rounds | best estimator within 0.2% to 9.5% of on-policy truth | | no single best estimator |
+| Auction incentives | 20,000 auctions x 24 configurations | VCG: 0.0% profitable deviations | GSP up to 21.6%, first price up to 59.2% | as theory predicts |
+| Bid shading | Criteo prices, 10 later days | 99.8% to 100% of oracle surplus | log-normal landscape 97.9% to 99.6% | win |
+| Budget pacing | 1M auctions, 5 seeds | dual descent 0.996 to 0.999 of hindsight optimum | PID 0.32 to 0.98 | win |
+| Rust core | same inputs, identical outputs | FTRL 128x, FM 96x, pacing 58x to 162x | Python reference | win |
 
 ### CTR models on Criteo
 
@@ -68,14 +80,29 @@ buckets; FTRL trains 2 passes, the FM 1 pass (every FM overfits on its second pa
 | Model | Test logloss | Test AUC | Normalized entropy | Calibration (pred / actual) | ECE |
 |---|---:|---:|---:|---:|---:|
 | LR, FTRL-Proximal (alpha 0.05, L1 1) | 0.4586 ± 0.0003 | 0.7911 ± 0.0001 | 0.8059 ± 0.0005 | 1.004 ± 0.002 | 0.0028 ± 0.0003 |
-| Factorization machine (k 32, AdaGrad 0.01) | **0.4518 ± 0.0002** | **0.7991 ± 0.0001** | **0.7939 ± 0.0004** | 0.998 ± 0.002 | 0.0062 ± 0.0002 |
-| FM + isotonic calibration (fit on validation) | **0.4516 ± 0.0002** | 0.7991 ± 0.0001 | **0.7935 ± 0.0004** | 1.001 ± 0.000 | **0.0012 ± 0.0002** |
+| Factorization machine (k 32, AdaGrad 0.01) | 0.4518 ± 0.0002 | **0.7991 ± 0.0001** | 0.7939 ± 0.0004 | 0.998 ± 0.002 | 0.0062 ± 0.0002 |
+| FM + isotonic calibration (fit on validation) | **0.4516 ± 0.0002** | **0.7991 ± 0.0001** | **0.7935 ± 0.0004** | 1.001 ± 0.000 | **0.0012 ± 0.0002** |
 
 On the seed 0 test split the FM beats FTRL by +0.0083 AUC (DeLong 95% CI [+0.0080, +0.0085])
 and -0.0070 logloss (paired CI [-0.0073, -0.0068]). Isotonic calibration cuts the FM's expected
 calibration error by 5x; Platt scaling leaves it unchanged (0.0061).
 
-REFERENCE_TABLE
+Reference libraries on the same hashed features and the same seed 0 splits, each tuned on
+validation with its own small grid ([ctr_reference_sklearn.json](benchmarks/results/ctr_reference_sklearn.json),
+[ctr_reference_torch.json](benchmarks/results/ctr_reference_torch.json)):
+
+| Model | Buckets | Passes | Test logloss | Test AUC | Train s | Result |
+|---|---:|---:|---:|---:|---:|---|
+| This repo: FTRL-Proximal | 2^22 | 1 | **0.46016** | **0.78926** | **11.5** | win |
+| scikit-learn `SGDClassifier` (log loss, best of 7 step sizes) | 2^22 | 1 | 0.46753 | 0.78053 | 53 | loss |
+| This repo: factorization machine (k 32) | 2^20 | 1 | **0.45226** | **0.79853** | **81** | win |
+| PyTorch FM (k 32, sparse Adagrad, batch 1024, best of 3 rates x 2 passes) | 2^20 | 1 | 0.45324 | 0.79748 | 275 | loss |
+| Constant base rate | | | 0.56904 | 0.50000 | | |
+
+The PyTorch FM runs at 2^20 buckets because at 2^22 its factors and Adagrad state (1 GB) made
+the shared 8 GB machine swap; it is compared with this repo's FM at the same size. Its best rate
+was the smallest in its grid (0.02), so a smaller rate might narrow the 0.001 gap. scikit-learn's
+time includes building sparse matrices from the hashed rows.
 
 Against published numbers (quoted from the [BARS benchmark](https://openbenchmark.github.io/BARS/CTR/leaderboard/criteo_x4.html),
 Zhu et al. 2021, not rerun here). BARS trains on the full 36.7M-row split with a vocabulary
@@ -309,8 +336,13 @@ from ad_auction_lab.metrics import summary
 from ad_auction_lab.ope import BanditLog, estimate, uniform_action_dist
 
 # Three GSP auctions at once: bids and quality scores are (T, n), slot CTRs are (K,).
-r = run_auctions([[4, 2, 1], [1, 3, 2], [2, 2, 5]], [[0.05, 0.08, 0.06]] * 3, [0.3, 0.2],
-                 mechanism="gsp", reserve=0.5)
+r = run_auctions(
+    [[4, 2, 1], [1, 3, 2], [2, 2, 5]],
+    [[0.05, 0.08, 0.06]] * 3,
+    [0.3, 0.2],
+    mechanism="gsp",
+    reserve=0.5,
+)
 print(r.winner, r.price, r.revenue())
 
 # A hashed factorization machine on synthetic clicks in the Criteo layout.
@@ -323,8 +355,14 @@ print(summary(t.labels[test], fm.predict_proba(t, test), float(t.labels[train].m
 # IPS and SNIPS value of the uniform policy from a log of 3 actions in 1 position.
 rng = np.random.default_rng(0)
 a = rng.integers(0, 3, 10_000)
-log = BanditLog.from_arrays((rng.random(10_000) < 0.1 * (a + 1)).astype(float), a,
-                            np.full(10_000, 1 / 3), np.zeros(10_000, int), 3, 1)
+log = BanditLog.from_arrays(
+    (rng.random(10_000) < 0.1 * (a + 1)).astype(float),
+    a,
+    np.full(10_000, 1 / 3),
+    np.zeros(10_000, int),
+    3,
+    1,
+)
 print(estimate("ips", log, uniform_action_dist(3, 1)))
 ```
 
@@ -357,7 +395,7 @@ profitable deviation.
   <img src="docs/demo/auction.gif" alt="One auction under GSP, VCG and first price, and the incentive check" width="860">
 </p>
 
-The factorization machine trained on 3M Criteo rows, with test logloss, AUC, normalized entropy
+The factorization machine trained on 1M Criteo rows, with test logloss, AUC, normalized entropy
 and calibration.
 
 <p align="center">

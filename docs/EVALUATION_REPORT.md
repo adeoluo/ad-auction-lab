@@ -66,7 +66,16 @@ FM minus FTRL on the seed 0 split: AUC +0.00826 (DeLong 95% CI [+0.00797, +0.008
 over-predicts slightly in the lowest bins (0.023 predicted against 0.018 observed) and
 under-predicts in the 0.25 to 0.45 range by about 0.01; isotonic calibration fixes both.
 
-**References** (`reference`): REFERENCES_TEXT
+**References** (`reference`): on the seed 0 split, with the same hashed features. scikit-learn
+`SGDClassifier` (log loss), one pass in 500k-row chunks, tuned over the default "optimal" schedule
+(alpha 1e-5; at alpha 1e-7 and 1e-6 it diverged to validation logloss 5.1 and 0.70 in a first
+attempt) and constant rates {0.005, 0.02, 0.05} x alpha {1e-7, 1e-6}: best test 0.46753 / 0.78053
+against this repo's FTRL after one pass 0.46016 / 0.78926 (a win for FTRL; after two passes
+0.45869 / 0.79097). A PyTorch FM with the same model (k 32, sparse embeddings, Adagrad, batch 1024)
+over rates {0.02, 0.05, 0.1} and up to 2 passes, at 2^20 buckets because 2^22 made the machine
+swap: best (rate 0.02, 1 pass) test 0.45324 / 0.79748 in 275 s, against this repo's FM at 2^20
+0.45226 / 0.79853 in 81 s (a narrow win; PyTorch's best rate was the edge of its grid). Every
+higher rate and every second pass was worse, as for this repo's FM.
 
 **Published baselines** (quoted from the BARS Criteo_x4_001 leaderboard, not rerun): LR 0.4568 /
 0.7934, FM 0.4431 / 0.8086, FFM 0.4407 / 0.8113, DeepFM 0.4376 / 0.8143 (logloss / AUC), trained on
@@ -87,7 +96,11 @@ logloss behind the BARS LR on a quarter of the data, its FM 0.0087 behind the BA
 - *L1:* 0, 1, 4, 16 give 3,722,562, 1,775,280, 214,897 and 48,888 nonzero weights at logloss
   0.45855, 0.45869, 0.45933, 0.46114.
 
-**Speed** (`speed`): SPEED_TEXT
+**Speed** (`speed`): on the same 200,000 training rows and 20,000 prediction rows at 2^20
+buckets, back to back in one process, the Rust core trains FTRL at 794,078 rows/s against the
+Python reference's 6,227 (128x) and the FM (k 32) at 57,810 against 604 (96x); predictions are
+bit-identical. Full-split throughput varied with machine load (FTRL 0.7M to 2.9M rows/s, FM 37k
+to 290k).
 
 ## Off-policy evaluation (`benchmarks/ope_obd.py`)
 
