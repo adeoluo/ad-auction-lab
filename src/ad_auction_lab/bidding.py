@@ -19,6 +19,7 @@ maximizing bid is the shaded bid ``b*(v) = argmax_b (v - b) G(b)``.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cached_property
 from math import erf, erfc, exp, log, pi, sqrt
 
 import numpy as np
@@ -80,6 +81,17 @@ class EmpiricalLandscape:
 
         v = np.asarray(values, dtype=np.float64)
         flat = v.reshape(-1)
+        hs, hi_, xs, hull_levels = self._envelope
+        pos = np.searchsorted(xs, flat, side="right")
+        best_val = hs[pos] * flat + hi_[pos]
+        bid = hull_levels[pos] + eps
+        out = np.where(best_val > 0, bid, 0.0)
+        return out.reshape(v.shape)
+
+    @cached_property
+    def _envelope(self) -> tuple[F64, F64, F64, F64]:
+        """Upper envelope of the lines ``k v - k m_k``, built once per landscape."""
+
         levels, counts = np.unique(self.prices, return_counts=True)
         k = np.cumsum(counts).astype(np.float64)  # wins when bidding just above levels[i]
         slope, intercept = k, -k * levels
@@ -87,11 +99,7 @@ class EmpiricalLandscape:
         hs, hi_ = slope[hull], intercept[hull]
         # Breakpoints between consecutive hull lines.
         xs = (hi_[:-1] - hi_[1:]) / (hs[1:] - hs[:-1])
-        pos = np.searchsorted(xs, flat, side="right")
-        best_val = hs[pos] * flat + hi_[pos]
-        bid = levels[hull][pos] + eps
-        out = np.where(best_val > 0, bid, 0.0)
-        return out.reshape(v.shape)
+        return hs, hi_, xs, levels[hull]
 
     def shade_bruteforce(self, values: ArrayLike, eps: float = 1e-9) -> F64:
         """Quadratic reference for :meth:`shade` (tests only)."""
@@ -112,21 +120,23 @@ def _upper_hull(slope: F64, intercept: F64) -> NDArray[np.int64]:
     ``slope`` must be strictly increasing (true for cumulative win counts).
     """
 
+    # Plain Python floats: indexing numpy scalars in this loop is several times slower.
+    s, c = slope.tolist(), intercept.tolist()
     hull: list[int] = []
-
-    def bad(a: int, b: int, c: int) -> bool:
-        # Line b is never strictly above both a and c.
-        lhs = float((intercept[c] - intercept[a]) * (slope[b] - slope[a]))
-        return lhs >= float((intercept[b] - intercept[a]) * (slope[c] - slope[a]))
-
-    for i in range(slope.size):
-        while len(hull) >= 2 and bad(hull[-2], hull[-1], i):
-            hull.pop()
+    for i in range(len(s)):
+        while len(hull) >= 2:
+            a, b = hull[-2], hull[-1]
+            # Line b is never strictly above both a and i.
+            if (c[i] - c[a]) * (s[b] - s[a]) >= (c[b] - c[a]) * (s[i] - s[a]):
+                hull.pop()
+            else:
+                break
         hull.append(i)
     # Drop leading lines that only win for x < 0.
-    while len(hull) >= 2 and intercept[hull[0]] <= intercept[hull[1]]:
-        hull.pop(0)
-    return np.asarray(hull, dtype=np.int64)
+    start = 0
+    while len(hull) - start >= 2 and c[hull[start]] <= c[hull[start + 1]]:
+        start += 1
+    return np.asarray(hull[start:], dtype=np.int64)
 
 
 @dataclass(frozen=True)
