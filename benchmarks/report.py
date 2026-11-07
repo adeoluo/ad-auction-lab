@@ -36,6 +36,16 @@ def table(header: list[str], rows: list[list[Any]]) -> None:
     print()
 
 
+# Zhu et al., "Open Benchmarking for Click-Through Rate Prediction" (CIKM 2021), BARS leaderboard
+# https://openbenchmark.github.io/BARS/CTR/leaderboard/criteo_x4.html (full Criteo, random 8:1:1).
+PUBLISHED = [
+    ("LR", "0.4568", "0.7934"),
+    ("FM", "0.4431", "0.8086"),
+    ("FFM", "0.4407", "0.8113"),
+    ("DeepFM", "0.4376", "0.8143"),
+]
+
+
 def ctr() -> None:
     if have("ctr_sweep"):
         print("### CTR sweep (validation log loss, best per model)\n")
@@ -125,21 +135,37 @@ def ctr() -> None:
         rel = f["fm"][0]["reliability"]["bins"]
         print("FM reliability (20 bins, seed 0): mean prediction / mean label")
         print(", ".join(f"{b['mean_prediction']:.3f}/{b['mean_label']:.3f}" for b in rel), "\n")
+    if have("ctr_final"):
+        f = read("ctr_final")
+        print("### Against published Criteo baselines (quoted, not rerun)\n")
+        rows = [
+            [
+                f"This repo: {names[k]} (1 in 4 sample, {f['rows']['train']:,} train rows)",
+                ms([r["test"]["logloss"] for r in f[k]]),
+                ms([r["test"]["auc"] for r in f[k]]),
+            ]
+            for k in ("ftrl", "fm")
+        ]
+        bars = "BARS Criteo_x4_001, 36.7M train rows"
+        rows += [[f"{m} ({bars})", ll, auc] for m, ll, auc in PUBLISHED]
+        table(["Model", "Test logloss", "Test AUC"], rows)
     for which in ("all", "sklearn", "torch"):
         if not have(f"ctr_reference_{which}"):
             continue
         r = read(f"ctr_reference_{which}")
-        print(f"### References ({which})\n")
+        print(f"### References ({which}, 2^{r['bits']} hash buckets)\n")
         rows = []
         if "constant_base_rate" in r:
             c = r["constant_base_rate"]
             rows.append(["constant base rate", f"{c['logloss']:.5f}", f"{c['auc']:.5f}", "", ""])
         if "sklearn_sgd_logistic" in r:
             s = r["sklearn_sgd_logistic"]
-            sec = next(x["seconds"] for x in s["runs"] if x["alpha_l2"] == s["chosen_alpha_l2"])
+            ch = s["chosen"]
+            sec = next(x["seconds"] for x in s["runs"] if all(x.get(k) == v for k, v in ch.items()))
+            lr = ch["learning_rate"] + (f" {ch['eta0']}" if "eta0" in ch else "")
             rows.append(
                 [
-                    f"scikit-learn SGDClassifier (alpha {s['chosen_alpha_l2']})",
+                    f"scikit-learn SGDClassifier (alpha {ch['alpha']}, {lr})",
                     f"{s['test']['logloss']:.5f}",
                     f"{s['test']['auc']:.5f}",
                     f"{s['test']['normalized_entropy']:.4f}",
@@ -164,7 +190,7 @@ def ctr() -> None:
         table(["Model", "Test logloss", "Test AUC", "NE", "Train s"], rows)
     if have("ctr_ablation"):
         a = read("ctr_ablation")
-        print("### CTR ablations (test split, 1 epoch)\n")
+        print("### CTR ablations (test split, chosen passes: FTRL 2, FM 1)\n")
         for key, col in (
             ("bits", "bits"),
             ("fields", "fields"),

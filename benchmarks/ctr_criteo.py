@@ -179,13 +179,19 @@ def cmd_ablate(a: argparse.Namespace) -> None:
     t, train, _valid, test, base = load()
     ev = {"test": test}
     out: dict[str, Any] = {"bits": [], "fields": [], "train_size": [], "fm_k": [], "l1": []}
+
+    def save() -> None:  # after every group, so a stopped run keeps what it finished
+        write("ctr_ablation", {"base_rate": base, "test_rows": len(test), **out})
+
     for l1 in (0.0, 1.0, 4.0, 16.0):
         m = FTRLProximal(**{**FTRL_BEST, "l1": l1})
         r = run(m, t, train, ev, base, epochs=_epochs(m))
         r["nonzero_weights"] = int(np.count_nonzero(m.weights()))
         out["l1"].append({"model": "ftrl", "l1": l1, **r})
+    save()
+    # The FM stops at 2^22 buckets: at 2^24 its factors and AdaGrad state need 4 GB at k = 32.
     for bits in (16, 18, 20, 22, 24):
-        for kind in ("ftrl", "fm"):
+        for kind in ("ftrl", "fm") if bits <= 22 else ("ftrl",):
             m: Any = (
                 FTRLProximal(**{**FTRL_BEST, "bits": bits})
                 if kind == "ftrl"
@@ -193,6 +199,7 @@ def cmd_ablate(a: argparse.Namespace) -> None:
             )
             r = run(m, t, train, ev, base, epochs=_epochs(m))
             out["bits"].append({"model": kind, "bits": bits, **r})
+    save()
     n = len(t)
     groups = {
         "integer features only (13)": Table(t.small, np.zeros((n, 0), np.uint32), t.labels),
@@ -203,16 +210,18 @@ def cmd_ablate(a: argparse.Namespace) -> None:
             m = FTRLProximal(**FTRL_BEST) if kind == "ftrl" else FactorizationMachine(**FM_BEST)
             r = run(m, tab, train, ev, base, epochs=_epochs(m))
             out["fields"].append({"model": kind, "fields": name, **r})
+    save()
     for size in (100_000, 300_000, 1_000_000, 3_000_000, len(train)):
         for kind in ("ftrl", "fm"):
             m = FTRLProximal(**FTRL_BEST) if kind == "ftrl" else FactorizationMachine(**FM_BEST)
             r = run(m, t, train[:size], ev, base, epochs=_epochs(m))
             out["train_size"].append({"model": kind, "train_rows": size, **r})
+    save()
     for k in (1, 2, 4, 8, 16, 32):
         m = FactorizationMachine(**{**FM_BEST, "k": k})
         r = run(m, t, train, ev, base, epochs=_epochs(m))
         out["fm_k"].append({"k": k, **r})
-    write("ctr_ablation", {"base_rate": base, "test_rows": len(test), **out})
+    save()
 
 
 def cmd_speed(a: argparse.Namespace) -> None:
@@ -220,14 +229,17 @@ def cmd_speed(a: argparse.Namespace) -> None:
     sub = t.take(np.sort(train[: a.rows]))
     held = t.take(np.sort(test[:20_000]))
     out = []
+    # 2^20 buckets keeps both backends' state under 1 GB at k = 32; speed per row does not
+    # depend on the table size, only the memory does.
+    bits = a.bits
     for kind in ("ftrl", "fm"):
-        row: dict[str, Any] = {"model": kind, "rows": len(sub)}
+        row: dict[str, Any] = {"model": kind, "rows": len(sub), "bits": bits}
         preds = {}
         for backend in ("rust", "python"):
             m: Any = (
-                FTRLProximal(**FTRL_BEST, backend=backend)
+                FTRLProximal(**{**FTRL_BEST, "bits": bits}, backend=backend)
                 if kind == "ftrl"
-                else FactorizationMachine(**FM_BEST, backend=backend)
+                else FactorizationMachine(**{**FM_BEST, "bits": bits}, backend=backend)
             )
             t0 = time.perf_counter()
             m.partial_fit(sub)
@@ -235,6 +247,7 @@ def cmd_speed(a: argparse.Namespace) -> None:
             t0 = time.perf_counter()
             preds[backend] = m.predict_proba(held)
             row[f"{backend}_predict_rows_per_s"] = len(held) / (time.perf_counter() - t0)
+            del m
         row["speedup_train"] = row["rust_train_rows_per_s"] / row["python_train_rows_per_s"]
         row["max_abs_prediction_difference"] = float(
             np.max(np.abs(preds["rust"].astype(np.float64) - preds["python"]))
@@ -262,14 +275,24 @@ def _chunks(rows: Any, size: int = 500_000) -> Any:
 
 
 def ref_sklearn(t: Table, train: Any, valid: Any, test: Any, base: float, bits: int) -> dict:
-    """Logistic regression with scikit-learn's SGDClassifier on the same hashed features."""
+    """Logistic regression with scikit-learn's SGDClassifier on the same hashed features.
+
+    The default "optimal" step size diverges at small L2 on these features (validation logloss
+    5.1 at alpha 1e-7, 0.70 at 1e-6), so the grid also covers constant step sizes.
+    """
 
     from sklearn.linear_model import SGDClassifier
 
+    grid: list[dict[str, Any]] = [{"alpha": 1e-5, "learning_rate": "optimal"}]
+    grid += [
+        {"alpha": l2, "learning_rate": "constant", "eta0": eta}
+        for l2 in (1e-7, 1e-6)
+        for eta in (0.005, 0.02, 0.05)
+    ]
     runs = []
-    best: tuple[float, Any, float] | None = None
-    for l2 in (1e-7, 1e-6, 1e-5):
-        clf = SGDClassifier(loss="log_loss", alpha=l2, random_state=0)
+    best: tuple[float, Any, dict] | None = None
+    for cfg in grid:
+        clf = SGDClassifier(loss="log_loss", random_state=0, **cfg)
         t0 = time.perf_counter()
         for c in _chunks(train):
             clf.partial_fit(_hashed_csr(t, c, bits), t.labels[c], classes=[0, 1])
@@ -278,14 +301,14 @@ def ref_sklearn(t: Table, train: Any, valid: Any, test: Any, base: float, bits: 
             [clf.predict_proba(_hashed_csr(t, c, bits))[:, 1] for c in _chunks(valid)]
         )
         s = summary(t.labels[valid], pv, base)
-        runs.append({"alpha_l2": l2, "seconds": sec, "rows_per_s": len(train) / sec, "valid": s})
-        print("sklearn", l2, s, flush=True)
+        runs.append({**cfg, "seconds": sec, "rows_per_s": len(train) / sec, "valid": s})
+        print("sklearn", cfg, s, flush=True)
         if best is None or s["logloss"] < best[0]:
-            best = (s["logloss"], clf, l2)
+            best = (s["logloss"], clf, cfg)
     assert best is not None
     clf = best[1]
     pt = np.concatenate([clf.predict_proba(_hashed_csr(t, c, bits))[:, 1] for c in _chunks(test)])
-    return {"runs": runs, "chosen_alpha_l2": best[2], "test": summary(t.labels[test], pt, base)}
+    return {"runs": runs, "chosen": best[2], "test": summary(t.labels[test], pt, base)}
 
 
 def ref_torch_fm(
@@ -331,7 +354,9 @@ def ref_torch_fm(
         loss_fn = torch.nn.BCEWithLogitsLoss()
         for e in range(1, epochs + 1):
             t0 = time.perf_counter()
+            done = 0
             for c in _chunks(train, 200_000):
+                done += len(c)
                 sub = t.take(np.asarray(c))
                 idx = torch.from_numpy(hash_rows(sub.small, sub.wide, bits))
                 y = torch.from_numpy(sub.labels.astype(np.float32))
@@ -340,6 +365,7 @@ def ref_torch_fm(
                     loss = loss_fn(model(idx[s : s + 1024]), y[s : s + 1024])
                     loss.backward()
                     opt.step()
+                print(f"  torch fm lr {lr} epoch {e}: {done:,} rows", flush=True)
             sec = time.perf_counter() - t0
             sv = summary(t.labels[valid], predict(model, valid), base)
             row = {
@@ -360,13 +386,15 @@ def ref_torch_fm(
 
 def cmd_reference(a: argparse.Namespace) -> None:
     t, train, valid, test, base = load()
-    out: dict[str, Any] = {"bits": 22, "train_rows": len(train), "test_rows": len(test)}
+    out: dict[str, Any] = {"bits": a.bits, "train_rows": len(train), "test_rows": len(test)}
     p_const = np.full(len(test), base)
     out["constant_base_rate"] = summary(t.labels[test], p_const, base)
     if a.which in ("all", "sklearn"):
-        out["sklearn_sgd_logistic"] = ref_sklearn(t, train, valid, test, base, 22)
+        out["sklearn_sgd_logistic"] = ref_sklearn(t, train, valid, test, base, a.bits)
     if a.which in ("all", "torch"):
-        out["torch_fm"] = ref_torch_fm(t, train, valid, test, base, 22, FM_BEST["k"], FM_EPOCHS + 1)
+        out["torch_fm"] = ref_torch_fm(
+            t, train, valid, test, base, a.bits, FM_BEST["k"], FM_EPOCHS + 1
+        )
     write(f"ctr_reference_{a.which}", out)
 
 
@@ -383,9 +411,13 @@ def main() -> None:
     sub.add_parser("ablate").set_defaults(func=cmd_ablate)
     s = sub.add_parser("speed")
     s.add_argument("--rows", type=int, default=20_000)
+    s.add_argument("--bits", type=int, default=20)
     s.set_defaults(func=cmd_speed)
     s = sub.add_parser("reference")
     s.add_argument("--which", choices=["all", "sklearn", "torch"], default="all")
+    # The PyTorch FM at 2^22 buckets and k = 32 holds 1 GB of factors and AdaGrad state and
+    # thrashed this shared 8 GB machine, so it runs at 2^20 against the FM ablation at 2^20.
+    s.add_argument("--bits", type=int, default=22)
     s.set_defaults(func=cmd_reference)
     a = p.parse_args()
     a.func(a)
