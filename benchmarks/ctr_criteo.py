@@ -354,7 +354,9 @@ def ref_torch_fm(
         loss_fn = torch.nn.BCEWithLogitsLoss()
         for e in range(1, epochs + 1):
             t0 = time.perf_counter()
+            done = 0
             for c in _chunks(train, 200_000):
+                done += len(c)
                 sub = t.take(np.asarray(c))
                 idx = torch.from_numpy(hash_rows(sub.small, sub.wide, bits))
                 y = torch.from_numpy(sub.labels.astype(np.float32))
@@ -363,6 +365,7 @@ def ref_torch_fm(
                     loss = loss_fn(model(idx[s : s + 1024]), y[s : s + 1024])
                     loss.backward()
                     opt.step()
+                print(f"  torch fm lr {lr} epoch {e}: {done:,} rows", flush=True)
             sec = time.perf_counter() - t0
             sv = summary(t.labels[valid], predict(model, valid), base)
             row = {
@@ -383,13 +386,15 @@ def ref_torch_fm(
 
 def cmd_reference(a: argparse.Namespace) -> None:
     t, train, valid, test, base = load()
-    out: dict[str, Any] = {"bits": 22, "train_rows": len(train), "test_rows": len(test)}
+    out: dict[str, Any] = {"bits": a.bits, "train_rows": len(train), "test_rows": len(test)}
     p_const = np.full(len(test), base)
     out["constant_base_rate"] = summary(t.labels[test], p_const, base)
     if a.which in ("all", "sklearn"):
-        out["sklearn_sgd_logistic"] = ref_sklearn(t, train, valid, test, base, 22)
+        out["sklearn_sgd_logistic"] = ref_sklearn(t, train, valid, test, base, a.bits)
     if a.which in ("all", "torch"):
-        out["torch_fm"] = ref_torch_fm(t, train, valid, test, base, 22, FM_BEST["k"], FM_EPOCHS + 1)
+        out["torch_fm"] = ref_torch_fm(
+            t, train, valid, test, base, a.bits, FM_BEST["k"], FM_EPOCHS + 1
+        )
     write(f"ctr_reference_{a.which}", out)
 
 
@@ -410,6 +415,9 @@ def main() -> None:
     s.set_defaults(func=cmd_speed)
     s = sub.add_parser("reference")
     s.add_argument("--which", choices=["all", "sklearn", "torch"], default="all")
+    # The PyTorch FM at 2^22 buckets and k = 32 holds 1 GB of factors and AdaGrad state and
+    # thrashed this shared 8 GB machine, so it runs at 2^20 against the FM ablation at 2^20.
+    s.add_argument("--bits", type=int, default=22)
     s.set_defaults(func=cmd_reference)
     a = p.parse_args()
     a.func(a)

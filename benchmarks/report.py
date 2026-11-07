@@ -153,7 +153,7 @@ def ctr() -> None:
         if not have(f"ctr_reference_{which}"):
             continue
         r = read(f"ctr_reference_{which}")
-        print(f"### References ({which})\n")
+        print(f"### References ({which}, 2^{r['bits']} hash buckets)\n")
         rows = []
         if "constant_base_rate" in r:
             c = r["constant_base_rate"]
