@@ -9,7 +9,7 @@ flowchart LR
         direction TB
         Users([Analysts and clients]):::edge
         CLI["CLI<br/>auction, pace, ope"]:::edge
-        HTTP["HTTP service<br/>/auction /predict /ope"]:::core
+        HTTP["HTTP service<br/>/auction /predict /ope"]:::edge
         Validate["Validation<br/>shapes, limits"]:::control
         Users --> CLI ~~~ HTTP --> Validate
     end

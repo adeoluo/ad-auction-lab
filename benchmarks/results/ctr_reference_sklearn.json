@@ -1,0 +1,144 @@
+{
+  "machine": {
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "python": "3.12.14",
+    "numpy": "2.5.4",
+    "load_average_1m": 17.4453125,
+    "date": "2026-11-07T02:39:27"
+  },
+  "peak_rss_mb": 1002.265625,
+  "bits": 22,
+  "train_rows": 9168124,
+  "test_rows": 1146016,
+  "constant_base_rate": {
+    "logloss": 0.5690368960491528,
+    "auc": 0.5,
+    "normalized_entropy": 0.9998225694885851,
+    "calibration_ratio": 1.0003699856055428,
+    "ece": 0.0030501429082069524,
+    "rows": 1146016.0
+  },
+  "sklearn_sgd_logistic": {
+    "runs": [
+      {
+        "alpha": 1e-05,
+        "learning_rate": "optimal",
+        "seconds": 43.463354125007754,
+        "rows_per_s": 210939.17357668641,
+        "valid": {
+          "logloss": 0.4764535888445697,
+          "auc": 0.7737489034367403,
+          "normalized_entropy": 0.8371496729791794,
+          "calibration_ratio": 0.9105599209215216,
+          "ece": 0.028188353385618967,
+          "rows": 1146015.0
+        }
+      },
+      {
+        "alpha": 1e-07,
+        "learning_rate": "constant",
+        "eta0": 0.005,
+        "seconds": 52.992896791984094,
+        "rows_per_s": 173006.65853365473,
+        "valid": {
+          "logloss": 0.46773241634390356,
+          "auc": 0.7806334630511291,
+          "normalized_entropy": 0.8218261936773803,
+          "calibration_ratio": 0.9887363873292568,
+          "ece": 0.009110055316174662,
+          "rows": 1146015.0
+        }
+      },
+      {
+        "alpha": 1e-07,
+        "learning_rate": "constant",
+        "eta0": 0.02,
+        "seconds": 62.010034083010396,
+        "rows_per_s": 147849.039846148,
+        "valid": {
+          "logloss": 0.49376583082103864,
+          "auc": 0.767660802325535,
+          "normalized_entropy": 0.8675680349108917,
+          "calibration_ratio": 0.821460693566867,
+          "ece": 0.05454518128450956,
+          "rows": 1146015.0
+        }
+      },
+      {
+        "alpha": 1e-07,
+        "learning_rate": "constant",
+        "eta0": 0.05,
+        "seconds": 45.31264212500537,
+        "rows_per_s": 202330.3777940738,
+        "valid": {
+          "logloss": 0.5556892278226133,
+          "auc": 0.7485104510160978,
+          "normalized_entropy": 0.9763701360249613,
+          "calibration_ratio": 0.7149009263818311,
+          "ece": 0.09459752325136904,
+          "rows": 1146015.0
+        }
+      },
+      {
+        "alpha": 1e-06,
+        "learning_rate": "constant",
+        "eta0": 0.005,
+        "seconds": 45.09465775001445,
+        "rows_per_s": 203308.42848002462,
+        "valid": {
+          "logloss": 0.46773241634390356,
+          "auc": 0.7806334630511291,
+          "normalized_entropy": 0.8218261936773803,
+          "calibration_ratio": 0.9887363873292568,
+          "ece": 0.009110055316174662,
+          "rows": 1146015.0
+        }
+      },
+      {
+        "alpha": 1e-06,
+        "learning_rate": "constant",
+        "eta0": 0.02,
+        "seconds": 27.7298073330021,
+        "rows_per_s": 330623.42950680124,
+        "valid": {
+          "logloss": 0.49376583082103864,
+          "auc": 0.767660802325535,
+          "normalized_entropy": 0.8675680349108917,
+          "calibration_ratio": 0.821460693566867,
+          "ece": 0.05454518128450956,
+          "rows": 1146015.0
+        }
+      },
+      {
+        "alpha": 1e-06,
+        "learning_rate": "constant",
+        "eta0": 0.05,
+        "seconds": 80.87106358399615,
+        "rows_per_s": 113367.17478035385,
+        "valid": {
+          "logloss": 0.5542674610171285,
+          "auc": 0.7473875422497568,
+          "normalized_entropy": 0.9738720299257908,
+          "calibration_ratio": 0.7151957824512196,
+          "ece": 0.09363748495017477,
+          "rows": 1146015.0
+        }
+      }
+    ],
+    "chosen": {
+      "alpha": 1e-07,
+      "learning_rate": "constant",
+      "eta0": 0.005
+    },
+    "test": {
+      "logloss": 0.4675310534300042,
+      "auc": 0.7805297001784832,
+      "normalized_entropy": 0.821472390281902,
+      "calibration_ratio": 0.9905575190628833,
+      "ece": 0.00872115682358557,
+      "rows": 1146016.0
+    }
+  }
+}
