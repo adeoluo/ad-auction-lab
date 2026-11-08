@@ -75,10 +75,10 @@ impl Market<'_> {
 
 pub fn simulate(m: &Market, pacer: Pacer, checkpoints: usize) -> Result<Outcome, String> {
     let (n, t_len) = m.check()?;
-    if let Pacer::Pid { interval, .. } = pacer {
-        if interval == 0 {
-            return Err("PID interval must be positive".into());
-        }
+    if let Pacer::Pid { interval, .. } = pacer
+        && interval == 0
+    {
+        return Err("PID interval must be positive".into());
     }
     let checkpoints = checkpoints.max(1);
     let mut out = Outcome {
