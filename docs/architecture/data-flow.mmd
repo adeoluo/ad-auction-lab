@@ -1,0 +1,31 @@
+flowchart LR
+    classDef edge     fill:#F59E0B,stroke:#1E293B,color:#1E293B,stroke-width:1px;
+    classDef core     fill:#6366F1,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef data     fill:#10B981,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef control  fill:#0EA5E9,stroke:#1E293B,color:#ffffff,stroke-width:1px;
+    classDef obs      fill:#CBD5E1,stroke:#1E293B,color:#1E293B,stroke-width:1px;
+    subgraph Data["Data"]
+        direction TB
+        A["Criteo train.txt"]:::data -->|prepare_criteo.py| B[("uint8 / uint32 arrays")]:::data
+        G["Attribution prices"]:::data
+        I["Open Bandit logs"]:::data
+    end
+    subgraph Models["CTR models"]
+        direction TB
+        C["FTRL / FM"]:::core -->|test predictions| D[("CTR pool")]:::data
+    end
+    subgraph Markets["Markets"]
+        direction TB
+        E["Auction incentives"]:::core
+        F["Pacing markets"]:::core
+        H["Bid shading"]:::core
+    end
+    subgraph OPE["Off-policy evaluation"]
+        direction TB
+        J["OPE estimators"]:::core --> K["Bootstrap CIs,<br/>obp parity"]:::obs
+    end
+    Data -->|arrays| Models
+    Models -->|CTR pool| Markets
+    Data -->|prices| Markets
+    Data -->|logs| OPE
+    Models -->|cross-fitted reward models| OPE
