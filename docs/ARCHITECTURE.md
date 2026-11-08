@@ -24,19 +24,11 @@ moves between them.
 
 ## Data flow
 
-```mermaid
-flowchart LR
-    A[Criteo train.txt] -->|prepare_criteo.py| B[(uint8 / uint32 arrays)]
-    B --> C[FTRL / FM]
-    C -->|test predictions| D[(CTR pool)]
-    D --> E[Auction incentives]
-    D --> F[Pacing markets]
-    G[Attribution prices] --> F
-    G --> H[Bid shading]
-    I[Open Bandit logs] --> J[OPE estimators]
-    C -->|cross-fitted reward models| J
-    J --> K[Bootstrap CIs, obp parity]
-```
+<p align="center">
+  <img src="architecture/data-flow.svg" alt="Data flow diagram" width="860">
+</p>
+
+<sub>Legend: amber = entry points and external systems, indigo = core logic, green = data and state, blue = validation and control, grey = observability and outputs.</sub>
 
 1. `scripts/download_data.sh` streams the three public datasets into compact arrays.
 2. The CTR models train on Criteo; their test predictions become the quality scores and CTRs of
