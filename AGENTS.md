@@ -58,7 +58,7 @@ Key modules:
 | `make parity` | Rust vs numpy reference parity tests |
 | `make validation` | Tests against obp and scikit-learn (obp is installed without its pinned dependencies) |
 | `make data` | Stream Criteo (1 row in 4), the Open Bandit Dataset and Criteo Attribution into $(DATA) |
-| `make evaluation` | Every benchmark on the full data (about 2 hours on an M1; needs `make data validation`) |
+| `make evaluation` | Every benchmark on the full data (several hours on an M1; needs `make data validation`) |
 | `make report` | Print the README tables from benchmarks/results/ |
 | `make demos` | Record the demo GIFs (needs vhs and the prepared data) |
 | `make diagram` | Render architecture diagram to SVG |

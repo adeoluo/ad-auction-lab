@@ -10,9 +10,9 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
 
 use crate::fm::{Fm, FmParams};
-use crate::ftrl::{predict_linear, Ftrl, FtrlParams};
+use crate::ftrl::{Ftrl, FtrlParams, predict_linear};
 use crate::hashing::Features;
-use crate::pacing::{simulate, Market, Pacer};
+use crate::pacing::{Market, Pacer, simulate};
 
 fn slice<'a, T: Element>(buf: &'a PyBuffer<T>, name: &str) -> PyResult<&'a [T]> {
     if !buf.is_c_contiguous() {
