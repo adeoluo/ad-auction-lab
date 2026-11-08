@@ -1,10 +1,22 @@
 cff-version: 1.2.0
-message: "If you use this work, please cite it."
+message: "If you use this software, please cite it as below."
+type: software
 title: "Ad Auction Lab"
+abstract: "Ad auctions (GSP, VCG, first price), bid shading, budget pacing, hashed CTR models on Criteo and off-policy evaluation on the Open Bandit Dataset, with a Rust core"
 authors:
   - family-names: "Ogunnoiki"
     given-names: "Adeolu"
-version: 0.1.0
-date-released: 2026-01-01
+version: "0.1.0"
+date-released: "2026-11-07"
 license: MIT
-url: "REPO_URL"
+repository-code: "https://github.com/adeoluo/ad-auction-lab"
+url: "https://github.com/adeoluo/ad-auction-lab"
+keywords:
+  - "budget-pacing"
+  - "criteo"
+  - "ctr-prediction"
+  - "factorization-machines"
+  - "mechanism-design"
+  - "off-policy-evaluation"
+  - "rust"
+  - "ad-auctions"
