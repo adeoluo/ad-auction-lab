@@ -10,7 +10,7 @@
 
 use rayon::prelude::*;
 
-use crate::hashing::{mix64, Features};
+use crate::hashing::{Features, mix64};
 use crate::metrics::{log_loss_one, non_negative, positive, sigmoid};
 
 #[derive(Clone, Copy, Debug)]

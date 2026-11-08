@@ -50,10 +50,9 @@ impl<'a> Features<'a> {
         if let (Some(a), Some(b)) = (
             small.len().checked_div(n_small),
             wide.len().checked_div(n_wide),
-        ) {
-            if a != b {
-                return Err(format!("blocks disagree on the row count ({a} vs {b})"));
-            }
+        ) && a != b
+        {
+            return Err(format!("blocks disagree on the row count ({a} vs {b})"));
         }
         Ok(Self {
             small,

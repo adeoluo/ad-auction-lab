@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://github.com/adeoluo/ad-auction-lab/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/adeoluo/ad-auction-lab/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/adeoluo/ad-auction-lab/releases"><img alt="Release" src="https://img.shields.io/github/v/release/adeoluo/ad-auction-lab"></a>
-  <img alt="Python" src="https://img.shields.io/badge/python-3.11%20%7C%203.12-blue">
+  <img alt="Python" src="https://img.shields.io/badge/python-3.12%20%7C%203.13%20%7C%203.14%20%7C%203.15-blue">
   <img alt="Rust" src="https://img.shields.io/badge/rust-core-B7410E">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green"></a>
 </p>
@@ -467,7 +467,7 @@ make validation  # against obp 0.5.7 and scikit-learn
   Bandit sample), metrics, isotonic calibration and logistic regression against scikit-learn.
 
 CI (`.github/workflows/ci.yml`) runs format, lint, type check and the coverage-gated tests on
-Python 3.11 and 3.12, the Rust checks with the parity tests, the reference-library tests, and a
+Python 3.12, 3.13, 3.14 and 3.15, the Rust checks with the parity tests, the reference-library tests, and a
 package and Docker image build. CodeQL runs on main and weekly.
 
 ## Responsible AI
