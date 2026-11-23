@@ -16,7 +16,7 @@
 
 > **Evidence level: publicly benchmarked.** Criteo click logs and the Open Bandit Dataset, with models and estimators checked against reference libraries. Not independently reproduced and not used in production. [What the levels mean](https://github.com/adeoluo#evidence-levels).
 
-## In plain English
+## Summary
 
 Online ads are sold in auctions that finish in a few thousandths of a second. This is a
 toolkit for the hard parts: guessing who will click, running the auction, choosing a bid, and
