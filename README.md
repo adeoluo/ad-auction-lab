@@ -14,6 +14,8 @@
 
 ---
 
+> **Evidence level: publicly benchmarked.** Criteo click logs and the Open Bandit Dataset, with models and estimators checked against reference libraries. Not independently reproduced and not used in production. [What the levels mean](https://github.com/adeoluo#evidence-levels).
+
 ## Motivation
 
 An ad system makes three linked decisions for every impression: how likely a click is, who wins
