@@ -16,6 +16,27 @@
 
 > **Evidence level: publicly benchmarked.** Criteo click logs and the Open Bandit Dataset, with models and estimators checked against reference libraries. Not independently reproduced and not used in production. [What the levels mean](https://github.com/adeoluo#evidence-levels).
 
+## In plain English
+
+Online ads are sold in auctions that finish in a few thousandths of a second. This is a
+toolkit for the hard parts: guessing who will click, running the auction, choosing a bid, and
+spending a budget evenly.
+
+- **Click prediction beats a PyTorch model** on the same features, on 9.17 million rows of
+  the public Criteo dataset (error 0.4518 against 0.4532, lower is better).
+- **Its estimators match the reference library exactly.** The difference from obp is
+  0.000000000000000006.
+- **It shows auction theory holding up.** In a VCG auction, lying about your bid never paid
+  off (0.0%). In the other two auction types it paid off up to 21.6% and 59.2% of the time.
+- **Its bidding and budget rules are near perfect.** Bidding keeps 99.8% to 100% of the best
+  possible profit, and budget pacing reaches 99.6% to 99.9% of the best possible result.
+- **The Rust core is 58x to 162x faster** than the plain Python version, with the same
+  output.
+
+**Where it falls short:** the best published model of the same kind still scores better
+(0.4431), having trained on four times more data. The auctions are simulations, not live ad
+traffic.
+
 ## Motivation
 
 An ad system makes three linked decisions for every impression: how likely a click is, who wins
