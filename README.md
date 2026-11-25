@@ -14,7 +14,7 @@
 
 ---
 
-> **Evidence level: publicly benchmarked.** The results come from public data, Criteo ad click logs and the Open Bandit Dataset of fashion recommendation logs. The models and estimators are checked against reference libraries. No one else has reproduced them yet, and they have not been used in production. [What the levels mean](https://github.com/adeoluo#evidence-levels).
+> **Evidence level: publicly benchmarked.** The results come from public data, Criteo ad click logs and the Open Bandit Dataset of fashion recommendation logs. The models and estimators are checked against reference libraries. No one else has reproduced them yet, and they have not been used in production.
 
 ## Highlights
 
