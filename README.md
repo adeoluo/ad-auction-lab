@@ -1,7 +1,7 @@
 <h1 align="center">Ad Auction Lab</h1>
 
 <p align="center">
-  <em>Position auctions, bid shading, budget pacing, hashed CTR models and off-policy evaluation, measured on Criteo and the Open Bandit Dataset.</em>
+  <em>A Python and Rust toolkit for the main parts of online advertising: click prediction, auctions, bidding, budget spending and testing new policies on old logs, each measured on public data.</em>
 </p>
 
 <p align="center">
@@ -14,43 +14,99 @@
 
 ---
 
-> **Evidence level: publicly benchmarked.** Criteo click logs and the Open Bandit Dataset, with models and estimators checked against reference libraries. Not independently reproduced and not used in production. [What the levels mean](https://github.com/adeoluo#evidence-levels).
+> **Evidence level: publicly benchmarked.** The results come from public data, Criteo ad click logs and the Open Bandit Dataset of fashion recommendation logs. The models and estimators are checked against reference libraries. No one else has reproduced them yet, and they have not been used in production. [What the levels mean](https://github.com/adeoluo#evidence-levels).
 
 ## Highlights
 
-Online ads are sold in auctions that finish in a few thousandths of a second. This is a
-toolkit for the hard parts: guessing who will click, running the auction, choosing a bid, and
-spending a budget evenly.
+Many online ads are sold in automated auctions, one auction for each time an ad is shown. This
+project builds and tests the main parts of such a system: predicting clicks, running the auction,
+choosing a bid and spending a budget evenly. It also estimates how a new policy would perform,
+using logs collected under an older one.
 
-- **Click prediction beats a PyTorch model** on the same features, on 9.17 million rows of
-  the public Criteo dataset (error 0.4518 against 0.4532, lower is better).
-- **Its estimators match the reference library exactly.** The difference from obp is
-  0.000000000000000006.
-- **It shows auction theory holding up.** In a VCG auction, lying about your bid never paid
-  off (0.0%). In the other two auction types it paid off up to 21.6% and 59.2% of the time.
-- **Its bidding and budget rules are near perfect.** Bidding keeps 99.8% to 100% of the best
-  possible profit, and budget pacing reaches 99.6% to 99.9% of the best possible result.
-- **The Rust core is 58x to 162x faster** than the plain Python version, with the same
-  output.
+- **The click model predicts clicks slightly better than the same model built with PyTorch.**
+  Both models trained on 9.17 million rows of public Criteo click logs with the same features.
+  The factorization machine (FM) has a test logloss of 0.4523, compared with 0.4532 for the
+  version built with PyTorch (Meta's deep learning library). Logloss measures the error of
+  predicted click probabilities, so lower is better.
+- **The off-policy estimators give the same results as the reference library.** Off-policy
+  evaluation (OPE) estimates how a new policy would perform from logs of an older one. On six
+  Open Bandit Dataset settings, the largest difference from obp (Open Bandit Pipeline, the
+  reference Python library for OPE) is 6.1e-18 (0.0000000000000000061). This is only
+  floating-point rounding.
+- **The auction tests agree with auction theory.** In the Vickrey-Clarke-Groves (VCG) auction, no
+  tested bid change earned a bidder more than bidding its true value (0.0% of cases, where a case
+  is one bidder in one auction), as theory predicts. A bid change paid off in up to 21.6% of
+  cases in the generalized second price (GSP) auction, and in up to 59.2% in the first-price
+  auction.
+- **Bid shading and budget pacing come close to the best possible result.** Shaded first-price
+  bids (bids set below the bidder's value) keep 99.8% to 100% of the surplus (value minus price)
+  of an oracle that knows the test prices. For one advertiser, dual descent pacing (a rule that
+  adjusts the bid after every auction) reaches 0.996 to 0.999 (99.6% to 99.9%) of the best result
+  possible in hindsight. A PID controller (a standard feedback rule) reaches 0.32 to 0.98.
+- **The Rust core gives identical results 58 to 162 times faster than the Python reference.**
+  Training is 128 times faster for the FTRL-Proximal (follow-the-regularized-leader) click model
+  and 96 times faster for the FM. The pacing simulator runs 58 to 162 times faster.
 
-**Where it falls short:** the best published model of the same kind still scores better
-(0.4431), having trained on four times more data. The auctions are simulations, not live ad
-traffic.
+**Where it falls short:** the best published FM, from the BARS benchmark of click models, still
+scores better. Its logloss is 0.4431 and its AUC (the chance that a click is ranked above a
+non-click, higher is better) is 0.8086, compared with 0.4518 and 0.7991 here. It trained on four
+times more data (36.7 million rows, compared with 9.17 million), and the gap has not been split
+into a data part and a model part. No off-policy estimator is best in every setting. In one
+setting (the men campaign, with the Thompson sampling policy estimated from the random log), every
+estimator misses the true click rate by about 10%. The auctions and pacing are simulations built
+from public price data, not live ad traffic.
+
+## Key terms
+
+Plain definitions of the terms used in this README.
+
+| Term | Meaning |
+|---|---|
+| AUC | Area under the ROC curve: the chance that a random click scores higher than a random non-click. From 0 to 1, where 0.5 is guessing. Higher is better. |
+| BARS | An open benchmark of click prediction models (Zhu et al. 2021). Its published Criteo results are quoted here for comparison, not rerun. |
+| Bernoulli Thompson sampling (BTS) | A recommendation policy that picks each item with the chance that the item is the best one, judged from the clicks seen so far. |
+| Bid shading | Bidding below one's value in a first-price auction to keep some profit. A lower bid pays less but wins less often. |
+| Budget pacing | Lowering an advertiser's bids over time so that its budget lasts the whole period instead of running out early. |
+| Click-through rate (CTR) | The share of ad views that get a click. A CTR model predicts this probability for each ad view. |
+| Direct method (DM) | An off-policy estimator that uses a click model to predict the clicks the new policy would get. It is stable but wrong when the model is wrong. |
+| Doubly robust (DR), SNDR, Switch-DR | DR adds to DM a weighted correction for the click model's errors. Self-normalized DR (SNDR) normalizes those weights. Switch-DR uses DM alone on rounds with very large weights. |
+| Dual descent | A pacing rule that bids the value divided by (1 + mu). After each auction, it raises mu if that auction's spend exceeded the per-auction target, and lowers it otherwise. |
+| Expected calibration error (ECE) | The average gap between predicted and actual click rates, over groups of rows with similar predictions. 0 is perfect. Lower is better. |
+| Factorization machine (FM) | A click model that, besides one weight per feature, learns a short vector per feature so that it can score how pairs of features act together. |
+| First-price auction | Each winner pays its own bid. Bidding one's true value then earns nothing, so bidders shade their bids. |
+| FTRL-Proximal | Follow-the-regularized-leader, an online training method for logistic regression (a linear click model). Each feature gets its own learning rate, and a penalty sets many weights to zero. |
+| Generalized second price (GSP) | Ads are ranked by bid weighted by quality score, and each winner pays the smallest bid that keeps its slot. With more than one slot it is not truthful. |
+| Hash buckets | Feature hashing maps every raw feature value to one of a fixed number of slots, the buckets. More buckets mean fewer collisions but more memory. |
+| Hindsight optimum | The most value a budget could buy if all prices were known in advance. Results are a ratio to it: 1 is the best possible. |
+| Inverse propensity scoring (IPS), SNIPS | IPS reweights each logged click by how much more often the new policy would show that item. Self-normalized IPS (SNIPS) divides by the sum of weights, not the round count. |
+| Logloss | The average penalty for predicted click probabilities, large when a confident prediction is wrong. 0 is perfect. Lower is better. |
+| Normalized entropy | Logloss divided by the logloss of always predicting the training click rate. 1.0 means no better than that constant guess. Lower is better. |
+| obp | Open Bandit Pipeline, the reference Python library for off-policy evaluation, released with the Open Bandit Dataset (Saito et al., 2021). Version 0.5.7 is used. |
+| Off-policy evaluation (OPE) | Estimating how a new policy would perform from logs collected while a different policy was running. |
+| Oracle surplus | The profit (value minus price) of the best bids fit on the test days themselves, which a real bidder cannot see. Results are a percentage of it. Higher is better. |
+| PID controller | A feedback rule from control engineering. It sets the bid multiplier from the gap between planned and actual spend, the running sum of that gap and its change. |
+| Profitable deviation | A bid other than the true value that earns a bidder more profit. In a truthful auction none exists, so 0% is the target. Lower is better. |
+| VCG | Vickrey-Clarke-Groves auction: each winner pays the value its presence takes away from the other bidders. Theory says bidding one's true value is always best. |
 
 ## Motivation
 
-An ad system makes three linked decisions for every impression: how likely a click is, who wins
-the auction and at what price, and how much each advertiser should bid given a budget. Each one
-is easy to get subtly wrong. A miscalibrated click model misprices every slot, a pricing rule that
-is not truthful invites bid manipulation, and a pacing controller that overreacts spends a daily
-budget by noon. Policies are also changed offline, from logs collected by a different policy, so
-the estimate of a new policy's value is itself a model that needs checking.
+An ad system makes three linked decisions for every impression (one showing of an ad). It
+predicts how likely a click is. It decides who wins the auction and at what price. It also decides
+how much each advertiser should bid, given a budget. Each decision is easy to get slightly wrong.
+A miscalibrated click model, whose probabilities are too high or too low, sets the wrong price for
+every slot. A pricing rule that is not truthful, so that a false bid can pay off, invites bid
+manipulation. A pacing controller that overreacts can spend a daily budget by noon. Teams also
+judge new policies offline, from logs collected by a different policy. So the estimate of a new
+policy's value is itself a model, and it needs checking too.
 
-This repository implements each piece with the math written out in the docstrings, measures it on
-public data (11.46M Criteo click rows, the full Open Bandit Dataset with 13.7M logged rounds,
-16.5M Criteo market prices), and checks it against reference libraries (obp, scikit-learn, PyTorch) and published
-numbers. The hot loops (FTRL, the factorization machine, the pacing simulator) run in a Rust core
-with a numpy reference kept for parity tests.
+This repository implements each part with the math written out in the docstrings (the
+documentation inside the code). It measures each part on public data: 11.46 million Criteo click
+rows, the full Open Bandit Dataset with 13.7 million logged rounds, and 16.5 million Criteo market
+prices. It checks each part against reference libraries (obp, scikit-learn and PyTorch) and against
+published numbers. scikit-learn is a standard Python machine learning library. The busiest loops
+(FTRL, the factorization machine and the pacing simulator) run in a core written in Rust, a fast
+compiled language. A Python reference version is kept so that parity tests can confirm that both
+give the same results.
 
 ## Architecture
 
@@ -58,26 +114,34 @@ with a numpy reference kept for parity tests.
   <img src="docs/architecture/architecture.svg" alt="Architecture diagram" width="860">
 </p>
 
-<sub>Legend: amber = entry points and external systems, indigo = core logic, green = data and state, blue = validation and control, grey = observability and outputs.</sub>
+<sub>Legend: amber marks entry points and external systems, indigo core logic, green data and state, blue validation and control, grey observability and outputs.</sub>
 
-The CLI and the HTTP service validate their inputs and load memory-mapped data prepared by
-`make data`: Criteo click rows, Open Bandit logs and Criteo market prices. The CTR models (FTRL
-logistic regression and a factorization machine on hashed features, in Rust) produce the quality
-scores that the auctions (GSP, VCG, first price, with reserves and a squashing exponent) rank by,
-and the bidding layer shades first-price bids and paces budgets against real market prices. The
-off-policy estimators reuse the CTR models as reward models. Every result passes through the same
-metrics (logloss, AUC, normalized entropy, calibration, bootstrap intervals) into JSON under
-`benchmarks/results/`, and the service counts requests in `/metrics`. Module details are in
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); key decisions are in the [ADRs](docs/adr/).
+The command line interface (CLI) and the HTTP service check their inputs. They load data prepared
+by `make data` as memory-mapped files, which are read from disk on demand: Criteo click rows, Open
+Bandit logs and Criteo market prices. Two click-through rate (CTR) models run in Rust on hashed
+features: FTRL logistic regression and a factorization machine. They produce the quality scores
+that the auctions use to rank ads. The auctions are GSP, VCG and first price. They support reserve
+prices (minimum prices) and a squashing exponent, which controls how much quality scores count in
+the ranking. The bidding layer shades first-price bids and paces budgets against real market
+prices. The off-policy estimators reuse the CTR models as reward models. Every result goes through
+the same metrics (logloss, AUC, normalized entropy, calibration and bootstrap intervals) into JSON
+files under `benchmarks/results/`. Bootstrap intervals are uncertainty ranges found by resampling
+the data. The service counts requests at `/metrics`. Module details are in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Key decisions are recorded in the [ADRs](docs/adr/)
+(architecture decision records).
 
 ## Results
 
-All numbers come from `make evaluation` on an Apple M1 (8 cores, 8 GB, shared with other work),
-raw JSON in [benchmarks/results/](benchmarks/results/); `make report` prints these tables. The
-full walkthrough, with threats to validity, is in
+All numbers come from `make evaluation`, run on an Apple M1 laptop (8 cores, 8 GB of memory,
+shared with other work). The raw JSON files are in [benchmarks/results/](benchmarks/results/), and
+`make report` prints these tables. The full walkthrough, including threats to validity, is in
 [docs/EVALUATION_REPORT.md](docs/EVALUATION_REPORT.md).
 
 ### Headline
+
+Each row compares one part of this repository with a reference library, a published result or a
+simpler method. Lower is better for logloss, estimator error and profitable deviations, and higher
+is better for AUC, surplus, the pacing ratio and speedup.
 
 | Component | Measured on | This repo | Compared with | Outcome |
 |---|---|---:|---:|---|
@@ -93,12 +157,20 @@ full walkthrough, with threats to validity, is in
 
 ### CTR models on Criteo
 
-Data: every 4th row of the Criteo Display Advertising Challenge `train.txt` (11,460,155 of
-45,840,617 rows, base rate 25.6%), split at random 80/10/10 (9,168,124 train, 1,146,015
-validation, 1,146,016 test rows). Hyperparameters were chosen on validation
-([ctr_sweep.json](benchmarks/results/ctr_sweep.json), [ctr_sweep_fm.json](benchmarks/results/ctr_sweep_fm.json));
-the test split is used only below. Mean ± standard deviation over 3 random splits; 2^22 hash
-buckets; FTRL trains 2 passes, the FM 1 pass (every FM overfits on its second pass).
+The data is every 4th row of `train.txt` from the Criteo Display Advertising Challenge, a public
+log of ad views and clicks. That is 11,460,155 of 45,840,617 rows, and 25.6% of them are clicks
+(the base rate). The rows were split at random into 80% training, 10% validation and 10% test
+rows (9,168,124 training, 1,146,015 validation and 1,146,016 test rows). Settings
+(hyperparameters) were chosen on the validation rows
+([ctr_sweep.json](benchmarks/results/ctr_sweep.json), [ctr_sweep_fm.json](benchmarks/results/ctr_sweep_fm.json)).
+The test rows are used only in the results below. Results are the mean plus or minus the standard
+deviation over 3 random splits. The models use 2^22 hash buckets (about 4.2 million). FTRL trains
+for 2 passes over the data and the FM for 1 pass, because every FM overfits (starts to memorize
+the training rows) on its second pass.
+
+The table compares the two models on the test rows. Lower is better for logloss, normalized
+entropy and ECE, higher is better for AUC, and a calibration ratio (mean prediction divided by
+actual click rate) of 1.0 is ideal.
 
 | Model | Test logloss | Test AUC | Normalized entropy | Calibration (pred / actual) | ECE |
 |---|---:|---:|---:|---:|---:|
@@ -106,13 +178,21 @@ buckets; FTRL trains 2 passes, the FM 1 pass (every FM overfits on its second pa
 | Factorization machine (k 32, AdaGrad 0.01) | 0.4518 ± 0.0002 | **0.7991 ± 0.0001** | 0.7939 ± 0.0004 | 0.998 ± 0.002 | 0.0062 ± 0.0002 |
 | FM + isotonic calibration (fit on validation) | **0.4516 ± 0.0002** | **0.7991 ± 0.0001** | **0.7935 ± 0.0004** | 1.001 ± 0.000 | **0.0012 ± 0.0002** |
 
-On the seed 0 test split the FM beats FTRL by +0.0083 AUC (DeLong 95% CI [+0.0080, +0.0085])
-and -0.0070 logloss (paired CI [-0.0073, -0.0068]). Isotonic calibration cuts the FM's expected
-calibration error by 5x; Platt scaling leaves it unchanged (0.0061).
+In the model names, k is the length of each FM feature vector, and alpha and L1 are FTRL settings.
+AdaGrad (a method that adapts each feature's learning rate) trains the FM. On the test split of
+seed 0 (the first random split), the FM beats FTRL by +0.0083 AUC. The DeLong test, a standard test
+for comparing two AUCs on the same rows, gives a 95% confidence interval of +0.0080 to +0.0085. The
+FM's logloss is also lower, by 0.0070 (difference -0.0070, paired 95% interval -0.0073 to -0.0068).
+Isotonic calibration remaps predicted probabilities with a non-decreasing step function fit on the
+validation rows. It cuts the FM's expected calibration error by 5 times. Platt scaling, a remapping
+with a logistic curve, leaves it unchanged (0.0061).
 
-Reference libraries on the same hashed features and the same seed 0 splits, each tuned on
-validation with its own small grid ([ctr_reference_sklearn.json](benchmarks/results/ctr_reference_sklearn.json),
-[ctr_reference_torch.json](benchmarks/results/ctr_reference_torch.json)):
+The next table compares this repository's models with reference libraries on the same hashed
+features and the same seed 0 splits. Each library was tuned on the validation rows with its own
+small grid of settings
+([ctr_reference_sklearn.json](benchmarks/results/ctr_reference_sklearn.json),
+[ctr_reference_torch.json](benchmarks/results/ctr_reference_torch.json)). Each row is one model:
+lower test logloss, higher test AUC and fewer training seconds ("Train s") are better.
 
 | Model | Buckets | Passes | Test logloss | Test AUC | Train s | Result |
 |---|---:|---:|---:|---:|---:|---|
@@ -122,15 +202,17 @@ validation with its own small grid ([ctr_reference_sklearn.json](benchmarks/resu
 | PyTorch FM (k 32, sparse Adagrad, batch 1024, best of 3 rates x 2 passes) | 2^20 | 1 | 0.45324 | 0.79748 | 275 | loss |
 | Constant base rate | | | 0.56904 | 0.50000 | | |
 
-The PyTorch FM runs at 2^20 buckets because at 2^22 its factors and Adagrad state (1 GB) made
-the shared 8 GB machine swap; it is compared with this repo's FM at the same size. Its best rate
-was the smallest in its grid (0.02), so a smaller rate might narrow the 0.001 gap. scikit-learn's
-time includes building sparse matrices from the hashed rows.
+scikit-learn's `SGDClassifier` trains logistic regression by stochastic gradient descent. The
+PyTorch FM runs at 2^20 buckets (about 1 million). At 2^22, its factors and Adagrad state (the
+learned vectors and the optimizer's running statistics, 1 GB) made the shared 8 GB machine swap
+memory to disk. So it is compared with this repository's FM at the same size. Its best learning
+rate was the smallest in its grid (0.02), so a smaller rate might narrow the 0.001 gap.
+scikit-learn's time includes building sparse matrices (tables that store only nonzero values)
+from the hashed rows.
 
-Against published numbers (quoted from the [BARS benchmark](https://openbenchmark.github.io/BARS/CTR/leaderboard/criteo_x4.html),
-Zhu et al. 2021, not rerun here). BARS trains on the full 36.7M-row split with a vocabulary
-(minimum count 10) and embedding size 16, so the gap mixes the 4x smaller training set with the
-model difference:
+The next table quotes published numbers from the [BARS benchmark](https://openbenchmark.github.io/BARS/CTR/leaderboard/criteo_x4.html)
+(Zhu et al. 2021), which were not rerun here. Each row is one model and its training set size,
+where lower test logloss and higher test AUC are better.
 
 | Model | Train rows | Test logloss | Test AUC |
 |---|---:|---:|---:|
@@ -141,7 +223,16 @@ model difference:
 | BARS: FFM | 36.7M | 0.4407 | 0.8113 |
 | BARS: DeepFM | 36.7M | 0.4376 | 0.8143 |
 
-Ablations on the seed 0 test split ([ctr_ablation.json](benchmarks/results/ctr_ablation.json)):
+LR is logistic regression. FFM (field-aware factorization machine) and DeepFM (an FM combined with
+a neural network) are larger models not built here. BARS trains on the full 36.7-million-row
+split. Its vocabulary keeps features seen at least 10 times (minimum count 10), and its embedding
+size (the length of the learned vector for each feature) is 16. So the gap mixes two effects: the
+4 times smaller training set here, and the model difference.
+
+An ablation changes one part of the setup to see how much it matters, and each row below changes
+one setting of the full model. The columns give test logloss (lower is better) and AUC (higher is
+better) for FTRL and the FM on the seed 0 test split
+([ctr_ablation.json](benchmarks/results/ctr_ablation.json)).
 
 | Ablation | FTRL logloss | FTRL AUC | FM logloss | FM AUC |
 |---|---:|---:|---:|---:|
@@ -155,34 +246,45 @@ Ablations on the seed 0 test split ([ctr_ablation.json](benchmarks/results/ctr_a
 | 1M training rows | 0.46951 | 0.77767 | 0.46814 | 0.77971 |
 | 3M training rows | 0.46330 | 0.78545 | 0.45911 | 0.79065 |
 
-The FM at 2^24 buckets needs 4 GB of factors and AdaGrad state at k = 32 and was not run. FM rank
-k = 1, 4, 16, 32 gives test logloss 0.46003, 0.45735, 0.45315, 0.45165. FTRL's L1 = 1 halves the
-nonzero weights (3,722,562 to 1,775,280) for +0.00014 logloss; L1 = 16 keeps 48,888 weights at
-0.46114. FTRL beats the FM at 100k rows (and on logloss at 300k); the FM still gains about 0.005 AUC per doubling of the
-training set between 3M and 9.17M rows, which suggests (untested) that most of the 0.0095 AUC gap
-to the BARS FM is the 4x smaller sample.
+The FM at 2^24 buckets (about 16.8 million) needs 4 GB of factors and AdaGrad state at k = 32,
+so it was not run. FM rank k = 1, 4, 16 and 32 gives test logloss 0.46003, 0.45735, 0.45315 and
+0.45165. The L1 penalty pushes small FTRL weights to exactly zero. At L1 = 1 it halves the
+number of nonzero weights (3,722,562 to 1,775,280) for +0.00014 logloss. At L1 = 16 it keeps
+48,888 weights, with logloss 0.46114. FTRL beats the FM at 100,000 training rows, and also on
+logloss at 300,000. The FM still gains about 0.005 AUC per doubling of the training set between
+3 million and 9.17 million rows. This suggests, without a direct test, that most of the 0.0095
+AUC gap to the BARS FM comes from the 4 times smaller sample.
 
-Rust core against the Python reference, both on the same 200,000 training rows and 20,000
-prediction rows at 2^20 buckets, back to back in one process
-([ctr_speed.json](benchmarks/results/ctr_speed.json)); predictions are identical:
+The next table compares the speed of the Rust core and the Python reference, in rows per second
+(higher is better). Both ran back to back in one process on the same 200,000 training rows and
+20,000 prediction rows at 2^20 buckets, and their predictions are identical
+([ctr_speed.json](benchmarks/results/ctr_speed.json)).
 
 | Model | Rust train rows/s | Python train rows/s | Speedup | Rust predict rows/s | Python predict rows/s |
 |---|---:|---:|---:|---:|---:|
 | FTRL-Proximal | 794,078 | 6,227 | 128x | 1,003,632 | 29,667 |
 | Factorization machine (k 32) | 57,810 | 604 | 96x | 633,231 | 1,798 |
 
-On the full 9.17M-row training split FTRL trained 0.7M to 2.9M rows per second and the FM 37k to
-290k across the runs, depending on machine load.
+On the full 9.17-million-row training split, FTRL trained 0.7 million to 2.9 million rows per
+second and the FM 37,000 to 290,000, depending on machine load.
 
 ### Off-policy evaluation on the Open Bandit Dataset
 
-The full Open Bandit Dataset (ZOZOTOWN fashion recommendations, 13.73M rounds in the all campaign,
-of which men and women are subsets), logged once by a uniform random policy and once by Bernoulli
-Thompson sampling (BTS). Each setting estimates one policy's click rate
-from the other policy's log and compares it with the click rate that policy actually achieved
-(the on-policy truth, as in Saito et al. 2021). Relative error |estimate - truth| / truth; DM and
-the DR family use the smoothed item-position click model; 95% intervals from 200 Poisson bootstrap
-replicates ([ope_obd.json](benchmarks/results/ope_obd.json)).
+The Open Bandit Dataset holds recommendation logs from ZOZOTOWN, a fashion shopping site. Its "all"
+campaign has 13.73 million rounds, and the "men" and "women" campaigns are subsets of it. A round
+is one recommendation shown and whether it was clicked. The data was logged twice: once by a
+uniform random policy (every item equally likely) and once by Bernoulli Thompson sampling (BTS).
+Each setting estimates one policy's click rate from the other policy's log. It then compares the
+estimate with the click rate that policy actually achieved, the on-policy truth (as in Saito et al.
+2021). Relative error is the absolute gap between estimate and truth, divided by the truth. DM and
+the DR family use the smoothed item-position click model: a click rate per item and position,
+pulled toward the position's average when data is scarce. The 95% intervals come from 200 Poisson
+bootstrap replicates, which reweight the rounds with random counts
+([ope_obd.json](benchmarks/results/ope_obd.json)).
+
+Each row is one setting, such as "BTS from random" (BTS estimated from the random log), with the
+log size in rounds. "Truth" is the achieved click rate, and the other columns give each
+estimator's relative error (lower is better, bold is best).
 
 | Setting (log rounds) | Truth | IPS | SNIPS | DM | DR | SNDR | Switch-DR |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -193,28 +295,34 @@ replicates ([ope_obd.json](benchmarks/results/ope_obd.json)).
 | women: BTS from random (0.86M) | 0.00638 | 0.032 | 0.031 | 0.030 | **0.029** | **0.029** | **0.029** |
 | women: random from BTS (7.77M) | 0.00482 | 0.044 | 0.080 | 0.005 | 0.064 | 0.061 | **0.004** |
 
-No estimator wins everywhere. Evaluating the uniform policy from the BTS log is the hard
-direction (importance weights up to 29,412, effective sample size 1,513 of 4.08M rounds on men):
-there DM and Switch-DR, which avoid the largest weights, do best, while SNIPS is worst in all
-three campaigns. In the easy direction (weights at most 10) every estimator is within 0.7% on the
-all campaign. On the men campaign every estimator misses by about 10% and no interval covers the
-truth; the error is shared by IPS, which uses no model, so it comes from the evaluation setup
-(the target policy is represented by BTS's average item distribution, but BTS changed over the
-week) rather than from an estimator.
+No estimator wins everywhere. Evaluating the uniform policy from the BTS log is the hard direction.
+There, importance weights (how much more often the new policy picks a logged item than the old
+policy did) reach 29,412 on the men campaign. The effective sample size, the number of equally
+weighted rounds that would give the same precision, is 1,513 of 4.08 million rounds there. In this
+direction, DM and Switch-DR avoid the largest weights. DM is best or second best in all three
+campaigns, and Switch-DR is best on the women campaign. SNIPS is worst in all three campaigns. In the easy direction (weights at most 10), every estimator is within 0.7% on the
+all campaign. In the same direction on the men campaign, every estimator misses by about 10%, and
+no interval covers the truth. IPS, which uses no model, shares this error. So the error comes from
+the evaluation setup rather than from an estimator. The target policy is represented by BTS's
+average item distribution, but BTS changed over the week.
 
-On the random logs, which have user context, cross-fitted contextual reward models (hashed FTRL
-and FM with user, item and user-by-item features) made DM worse than the item-position model
-(relative error 0.094 and 0.064 against 0.006 on all) and left DR unchanged, because the click
-signal is weak (0.35% CTR). Switch-DR's threshold matters only in the hard direction: on all, switching
-to the model above the 99th percentile of the weights gives 0.012, above the 90th under 0.001, and no
-switching (plain DR) 0.039 ([ope_ablation.json](benchmarks/results/ope_ablation.json)); the
-default (99th percentile) was fixed before these runs. Over 30 random subsamples per size, the
-error for BTS from random falls from 0.18 to 0.20 at 10k rounds to 0.047 to 0.048 at 300k for every
-estimator; in the hard direction at 10k rounds DR is off by 0.53 on average, DM and Switch-DR by
-0.20 and 0.19 ([ope_curve.json](benchmarks/results/ope_curve.json)).
+On the random logs, which include user context, cross-fitted contextual reward models were also
+tried. These are hashed FTRL and FM models with user, item and user-by-item features, each scored
+only on rounds it did not train on. They made DM worse than the item-position model (relative error
+0.094 and 0.064, compared with 0.006 on all) and left DR unchanged, because the click signal is
+weak (0.35% CTR). Switch-DR's threshold matters only in the hard direction. On all, switching to
+the model above the 99th percentile of the weights gives 0.012, above the 90th percentile under
+0.001, and no switching (plain DR) 0.039
+([ope_ablation.json](benchmarks/results/ope_ablation.json)). The default (99th percentile) was
+fixed before these runs. The error for BTS from random was also measured on 30 random subsamples
+per size. For every estimator, it falls from 0.18 to 0.20 at 10,000 rounds to 0.047 to 0.048 at
+300,000 rounds. In the hard direction at 10,000 rounds, DR is off by 0.53 on average, and DM and
+Switch-DR by 0.20 and 0.19 ([ope_curve.json](benchmarks/results/ope_curve.json)).
 
-Agreement with [obp](https://github.com/st-tech/zr-obp) 0.5.7 on 200k-round samples of all six
-settings ([ope_obp.json](benchmarks/results/ope_obp.json)):
+The next table checks agreement with [obp](https://github.com/st-tech/zr-obp) 0.5.7 on
+200,000-round samples of all six settings ([ope_obp.json](benchmarks/results/ope_obp.json)). Each
+row is one estimator: its largest absolute difference from obp (lower is better), its point
+estimate speedup, and its bootstrap speed relative to obp (below 1 means slower).
 
 | Estimator | Max abs difference from obp | Point estimate speedup | Bootstrap time vs obp |
 |---|---:|---:|---:|
@@ -225,18 +333,24 @@ settings ([ope_obp.json](benchmarks/results/ope_obp.json)):
 | SNDR | 5.2e-18 | 90x | 0.6x (slower) |
 | Switch-DR | 6.1e-18 | 69x | 0.9x (slower) |
 
-Point estimates agree to floating point rounding. For intervals obp resamples indices and this
-implementation draws Poisson weights; timed per estimator (100 replicates, 200k rounds) it is
-slower in 5 of 6 cases. In the benchmark it draws the weights once for all estimators of a log
-(`bootstrap_many`), which this per-estimator timing does not credit.
+Point estimates agree up to floating-point rounding. For intervals, obp resamples row indices,
+while this implementation draws Poisson weights. Timed per estimator (100 replicates, 200,000
+rounds), this implementation is slower in 5 of 6 cases. In the benchmark it draws the weights once
+for all estimators of a log (`bootstrap_many`), and this per-estimator timing does not credit that
+saving.
 
 ### Auctions, reserves and incentives
 
-Values and quality scores come from real data: a per-click value is a resampled Criteo
-Attribution market price divided by a resampled FM-predicted CTR from the Criteo test split, and
-quality scores are resampled FM CTRs. Each configuration runs 20,000 auctions; every bidder in
-turn scales its bid by 13 factors from 0 to 4 while the others bid truthfully
+Values and quality scores come from real data. A bidder's value per click is a resampled Criteo
+Attribution market price divided by a resampled FM-predicted CTR from the Criteo test split. A
+market price is the price Criteo paid for an ad view it won. Quality scores are resampled FM CTRs.
+Each configuration runs 20,000 auctions. Every bidder in turn tries 13 other bids, from 0 to 4
+times its true value, while the others bid their true values
 ([auction_incentives.json](benchmarks/results/auction_incentives.json)).
+
+Each row is one auction type, and each column gives the share of bidder-auctions where some
+tested bid change beat bidding the true value. Lower is better, and a truthful auction should show
+0%.
 
 | Mechanism | Bidder-auctions with a profitable deviation (no reserve) | With the empirical reserve |
 |---|---:|---:|
@@ -244,14 +358,23 @@ turn scales its bid by 13 factors from 0 to 4 while the others bid truthfully
 | GSP | 0.0% with 1 slot, 7.0% to 21.6% with 3 to 5 slots | 0.0% to 0.6% |
 | First price | 9.6% to 59.2% | 4.9% to 7.2% |
 
-GSP at the lowest envy-free equilibrium of Edelman, Ostrovsky and Schwarz reproduces VCG's
-allocation in 100% of 4,000 auctions and its revenue to a relative difference of 4.3e-16, while
-truthful GSP bidding would collect 1.8x (5 bidders, 3 slots) and 2.0x (10 bidders, 5 slots) the
-VCG revenue. The closed-form VCG prices match exhaustive search with Clarke payments on 1,800
-auctions (max difference 4.7e-13).
+The lowest envy-free equilibrium of Edelman, Ostrovsky and Schwarz is a stable set of GSP bids in
+which no advertiser would rather have another's slot at that slot's price. At this equilibrium,
+GSP gives the same allocation as VCG in 100% of 4,000 auctions, and VCG's revenue to a relative
+difference of 4.3e-16. Truthful GSP bidding would instead collect 1.8 times (5 bidders, 3 slots)
+and 2.0 times (10 bidders, 5 slots) the VCG revenue. The closed-form VCG prices are computed
+directly from a formula. They match an exhaustive search with Clarke payments (the textbook VCG
+payment rule) on 1,800 auctions, with a largest difference of 4.7e-13.
 
-Second-price reserves fit on 200,000 values and tested on 1,000,000 auctions
-([auction_reserves.json](benchmarks/results/auction_reserves.json)):
+A reserve price is the lowest price the seller accepts. The Myerson reserve is the textbook
+revenue-maximizing reserve for a known value distribution, here a log-normal fit. The empirical
+reserve is the reserve that earned the most on the training values. The reserves below are used
+in second-price auctions, fit on 200,000 values and tested on 1,000,000 auctions
+([auction_reserves.json](benchmarks/results/auction_reserves.json)).
+
+In the table, each row is a market size, and the revenue columns give mean revenue per auction
+with a 95% interval (higher is better). The last column gives the share of welfare, the total
+value to the winners, kept with the empirical reserve.
 
 | Bidders | No reserve: revenue | Myerson reserve (log-normal fit) | Empirical reserve | Welfare kept (empirical) |
 |---:|---:|---:|---:|---:|
@@ -260,16 +383,22 @@ Second-price reserves fit on 200,000 values and tested on 1,000,000 auctions
 | 5 | 4.848 ± 0.016 | 5.929 ± 0.018 | **6.012 ± 0.022** | 79% |
 | 10 | 10.795 ± 0.027 | 11.435 ± 0.028 | **11.526 ± 0.030** | 91% |
 
-The empirical revenue-maximizing reserve beats the Myerson reserve of a log-normal fit at every
-market size because the value distribution is heavier tailed than log-normal; the revenue gain
-from any reserve shrinks from 2.2x with 2 bidders to 7% with 10, at a falling welfare cost.
+The empirical reserve beats the Myerson reserve of a log-normal fit at every market size. The
+reason is that the real value distribution is heavier tailed than log-normal: very high values are
+more common than a log-normal fit predicts. The revenue gain from any reserve shrinks from 2.2
+times with 2 bidders to 7% with 10 bidders, and the welfare cost also falls.
 
 ### First-price bid shading
 
-The surplus-maximizing first-price bid against an estimated win-rate curve, fit on the first 21
-days of the Criteo Attribution prices (11,405,791 impressions) and scored on the last 10 days
-(5,062,236), against the oracle that is fit on the test days themselves
-([bid_shading.json](benchmarks/results/bid_shading.json)):
+In a first-price auction the best bid is below the value. It depends on the bid landscape, the
+estimated chance of winning at each bid. Here the landscape is fit on the first 21 days of the
+Criteo Attribution prices (11,405,791 impressions) and scored on the last 10 days (5,062,236). The
+shaded bids are compared with an oracle that is fit on the test days themselves
+([bid_shading.json](benchmarks/results/bid_shading.json)).
+
+Each row is a bidder's value as a multiple of the median market price. The columns give surplus
+(value minus price, over the auctions won) as a percentage of the oracle's. They cover truthful
+bids, a log-normal landscape and the exact empirical landscape. Higher is better.
 
 | Value / median price | Truthful bid: surplus | Log-normal landscape | Empirical landscape (exact, convex hull) |
 |---:|---:|---:|---:|
@@ -279,18 +408,25 @@ days of the Criteo Attribution prices (11,405,791 impressions) and scored on the
 | 5 | 0% | 99.6% | **100.0%** |
 | 20 | 0% | 99.6% | **100.0%** |
 
-Bidding the value in a first-price auction wins most often and earns nothing. The empirical
-landscape keeps 99.8% to 100% of the oracle's surplus a week and a half later; per campaign (20
-largest campaigns, value 2x the campaign median) a campaign's own landscape keeps 0.997 ± 0.003
-and the pooled landscape 0.980 ± 0.018 (worst 0.945). Shading 1M values against the 11.4M training
-prices takes 1.3 s after a 3.9 s fit.
+Bidding the true value in a first-price auction wins most often and earns nothing. The empirical
+landscape keeps 99.8% to 100% of the oracle's surplus a week and a half later. A second test uses
+the 20 largest campaigns, with the value set to 2 times the campaign median. There, a campaign's
+own landscape keeps 0.997 plus or minus 0.003 of the oracle surplus (mean and standard deviation
+over campaigns). The pooled landscape of all campaigns keeps 0.980 plus or minus 0.018 (worst
+0.945). Shading 1 million values against the 11.4 million training prices takes 1.3 seconds after
+a 3.9-second fit.
 
 ### Budget pacing
 
-Advertisers bid in repeated second-price auctions against an external market taken as a
-contiguous, time-ordered window of the Criteo Attribution prices (so daily patterns stay), with
-per-auction CTRs drawn from the FM's test predictions; each budget is a share of what that
-advertiser would spend unpaced. 1,000,000 auctions, mean ± std over 5 seeds ([pacing.json](benchmarks/results/pacing.json)):
+Advertisers bid in repeated second-price auctions against an external market. The market is a
+continuous, time-ordered window of the Criteo Attribution prices, so daily patterns stay. Each
+auction's CTRs are drawn from the FM's test predictions. Each budget is a share of what that
+advertiser would spend without pacing. The runs use 1,000,000 auctions, with the mean plus or
+minus the standard deviation over 5 random seeds ([pacing.json](benchmarks/results/pacing.json)).
+
+Each row is a market size and budget share, and the PID and dual descent columns give value won
+as a multiple of no pacing (higher is better). The last column gives the point in the period, from
+0 to 1, when budgets ran out under no pacing, PID and dual descent.
 
 | Advertisers | Budget | Value won vs no pacing: PID | Dual descent | Budget exhausted at (none / PID / dual) |
 |---:|---:|---:|---:|---:|
@@ -300,13 +436,18 @@ advertiser would spend unpaced. 1,000,000 auctions, mean ± std over 5 seeds ([p
 | 10 | 30% | 2.33 ± 0.04 | **2.55 ± 0.04** | 0.30 / 0.95 / 1.00 |
 | 10 | 60% | 1.48 ± 0.01 | **1.51 ± 0.01** | 0.60 / 0.98 / 1.00 |
 
-A single advertiser against the fractional knapsack optimum in hindsight: dual descent reaches
-0.996 to 0.999 of the optimum at budgets from 5% to 60%, PID 0.32 to 0.98 and no pacing 0.18 to
-0.71. PID with these gains reacts too slowly at small budgets. The Rust simulator runs 2.9M to
-122M auctions per second, 58x to 162x the Python reference with identical results
+A single advertiser is also compared with the fractional knapsack optimum in hindsight. This is
+the best use of the budget if all prices were known in advance and part of an auction could be
+bought. Dual descent reaches 0.996 to 0.999 of this optimum at budgets from 5% to 60%. PID reaches 0.32 to
+0.98, and no pacing 0.18 to 0.71. With these gains (tuning constants), PID reacts too slowly at
+small budgets. The Rust simulator runs 2.9 million to 122 million auctions per second, 58 to 162
+times the speed of the Python reference, with identical results
 ([pacing_speed.json](benchmarks/results/pacing_speed.json)).
 
 ## Quickstart
+
+The commands use make (a build tool) and uv (a Python package manager). Setup compiles the Rust
+core, so it needs a Rust toolchain.
 
 ```bash
 git clone https://github.com/adeoluo/ad-auction-lab.git && cd ad-auction-lab
@@ -317,8 +458,8 @@ python -m ad_auction_lab auction --bids 4,2,1 --quality 0.05,0.08,0.06 --slots 0
 python -m ad_auction_lab incentives --auctions 5000 --bidders 5
 ```
 
-The data commands need the prepared datasets (about 2.1 GB, streamed so the archives are never
-stored):
+The data commands need the prepared datasets (about 2.1 GB). The downloads are streamed, so the
+compressed archives are never stored:
 
 ```bash
 make data            # Criteo 1 in 4, Open Bandit Dataset, Criteo Attribution into ../.bench-data/ad-auction-lab
@@ -391,7 +532,8 @@ print(estimate("ips", log, uniform_action_dist(3, 1)))
 
 ### HTTP service
 
-A standard-library threaded service with request validation and size limits:
+A threaded service built only on the Python standard library, with request validation and size
+limits:
 
 ```bash
 python -m ad_auction_lab serve --port 8000 --model fm.npz
@@ -402,37 +544,38 @@ curl -s -X POST localhost:8000/auction \
 curl localhost:8000/metrics
 ```
 
-`POST /shade` returns shaded first-price bids for given values against a sample of market
-prices, `POST /predict` scores hashed feature rows with the loaded CTR model, and `POST /ope`
-runs the estimators on a posted log. `GET /ready` reports readiness and `GET /metrics` exposes
-per-route request, error and latency counters in Prometheus text format.
+`POST /shade` returns shaded first-price bids for given values, against a sample of market prices.
+`POST /predict` scores hashed feature rows with the loaded CTR model. `POST /ope` runs the
+estimators on a posted log. `GET /ready` reports whether the service is ready. `GET /metrics`
+shows request, error and latency counters for each route, in the Prometheus text format (a common
+monitoring format).
 
 ### Demos
 
-Recorded from real runs with [vhs](https://github.com/charmbracelet/vhs); each tape is in `docs/demo/`.
+Recorded from real runs with [vhs](https://github.com/charmbracelet/vhs), a tool that records terminal sessions. Each tape (vhs script) is in `docs/demo/`.
 
-One auction under the three mechanisms, then the incentive check: only VCG leaves no bidder a
+One auction under the three auction types, then the incentive check: only VCG leaves no bidder a
 profitable deviation.
 
 <p align="center">
   <img src="docs/demo/auction.gif" alt="One auction under GSP, VCG and first price, and the incentive check" width="860">
 </p>
 
-The factorization machine trained on 1M Criteo rows, with test logloss, AUC, normalized entropy
-and calibration.
+The factorization machine trained on 1 million Criteo rows, with test logloss, AUC, normalized
+entropy and calibration.
 
 <p align="center">
   <img src="docs/demo/ctr.gif" alt="Training the factorization machine on Criteo" width="860">
 </p>
 
-Off-policy estimates of the Bernoulli Thompson sampling policy from the 1.37M-round uniform
-random log, against the click rate the policy achieved in its own 12.36M rounds.
+Off-policy estimates of the BTS policy from the 1.37-million-round uniform random log, compared
+with the click rate the policy achieved in its own 12.36 million rounds.
 
 <p align="center">
   <img src="docs/demo/ope.gif" alt="Off-policy evaluation on the Open Bandit Dataset" width="860">
 </p>
 
-Ten advertisers pacing their budgets over 2M auctions priced by the Criteo market data.
+Ten advertisers pacing their budgets over 2 million auctions priced by the Criteo market data.
 
 <p align="center">
   <img src="docs/demo/pacing.gif" alt="Budget pacing with PID and dual descent" width="860">
@@ -440,25 +583,30 @@ Ten advertisers pacing their budgets over 2M auctions priced by the Criteo marke
 
 ## Design decisions
 
-- **Hashed CTR models in a Rust core.** Online learning is a sequential loop over rows that numpy
-  cannot vectorize; the Rust FTRL and FM train 128x and 96x faster than the Python reference and
-  give identical predictions. ([ADR-0002](docs/adr/0002-hashed-ctr-models-in-a-rust-core.md))
-- **FTRL-Proximal and an AdaGrad factorization machine, trained in log order.** Per-coordinate
-  learning rates and L1 sparsity are what production CTR systems use, and training in time order
-  matches how they see data. ([ADR-0003](docs/adr/0003-ftrl-proximal-and-adagrad-fm-in-log-order.md))
+- **Hashed CTR models in a Rust core.** Online learning updates the model one row at a time.
+  The numpy library (Python's array library) cannot vectorize this loop, that is, run it as one
+  array operation. The Rust FTRL and FM train 128 and 96 times faster than the Python reference
+  and give identical predictions. ([ADR-0002](docs/adr/0002-hashed-ctr-models-in-a-rust-core.md))
+- **FTRL-Proximal and an AdaGrad factorization machine, trained in log order.** Production CTR
+  systems use a learning rate per feature and L1 sparsity (many weights set to exactly zero).
+  Training in time order matches how those systems see data. ([ADR-0003](docs/adr/0003-ftrl-proximal-and-adagrad-fm-in-log-order.md))
 - **Off-policy estimators as per-round terms.** Every estimator reduces to a mean of per-round
-  terms plus a ratio, which gives one bootstrap for all of them and exact agreement with obp.
-  ([ADR-0004](docs/adr/0004-ope-as-round-terms-matching-obp.md))
+  terms plus a ratio of sums. This gives one bootstrap method for all of them, and agreement with
+  obp up to floating-point rounding. ([ADR-0004](docs/adr/0004-ope-as-round-terms-matching-obp.md))
 - **Closed-form position auctions with numeric incentive checks.** VCG with quality weights and
-  reserves is an affine maximizer, checked against brute force; truthfulness is tested by
-  searching bid deviations on real values. ([ADR-0005](docs/adr/0005-vcg-as-an-affine-maximizer-with-numeric-incentive-checks.md))
+  reserves is an affine maximizer: it picks the allocation with the highest weighted value, which
+  keeps truthful bidding optimal. It is checked against brute-force search. Truthfulness is tested
+  by searching bid changes on values built from real data. ([ADR-0005](docs/adr/0005-vcg-as-an-affine-maximizer-with-numeric-incentive-checks.md))
 - **Pacing on real prices and CTRs.** The external market comes from Criteo's paid prices and the
-  CTRs from the trained FM, so the controllers face real heavy tails and drift.
-  ([ADR-0006](docs/adr/0006-pacing-simulator-on-real-prices-and-ctrs.md))
-- **Datasets within a disk budget.** Criteo is streamed and subsampled 1 in 4 in time order;
-  nothing is stored compressed. ([ADR-0007](docs/adr/0007-datasets-within-the-disk-budget.md))
+  CTRs from the trained FM. So the controllers face real heavy tails (rare, very high prices) and
+  drift (changes over time). ([ADR-0006](docs/adr/0006-pacing-simulator-on-real-prices-and-ctrs.md))
+- **Datasets within a disk budget.** Criteo is streamed and kept at 1 row in 4, in time order.
+  Nothing is stored compressed. ([ADR-0007](docs/adr/0007-datasets-within-the-disk-budget.md))
 
 ## Testing
+
+The checks use ruff (a Python code checker), mypy (a type checker), pytest (the test runner) and
+cargo (Rust's build tool).
 
 ```bash
 make lint        # ruff format --check and ruff check
@@ -469,29 +617,38 @@ make parity      # Rust core against the numpy reference, extension required
 make validation  # against obp 0.5.7 and scikit-learn
 ```
 
-- `test_auctions.py`: textbook GSP and VCG examples, quality scores, squashing, reserves, ties,
-  VCG closed form against exhaustive search with Clarke payments, VCG truthful and GSP and first
-  price not (hypothesis-generated auctions), GSP at the envy-free equilibrium matching VCG revenue,
-  Myerson reserves (5/12 revenue for uniform values) and empirical reserves.
-- `test_bidding.py`, `test_pacing.py`: shading against brute force on the landscape, the symmetric
-  first-price equilibrium, log-normal landscape fits, budgets never exceeded, dual descent
-  approaching the hindsight optimum, and the hindsight bound against greedy subsets.
+- `test_auctions.py`: textbook GSP and VCG examples, quality scores, squashing, reserves and
+  ties. The VCG closed form is checked against exhaustive search with Clarke payments. On random
+  auctions generated by hypothesis (a library that generates random test inputs), no tested bid
+  change helps a VCG bidder. On 500 seeded random auctions, GSP and first price are shown not to
+  be truthful. GSP at the envy-free equilibrium matches VCG revenue. With two bidders whose values
+  are uniform from 0 to 1, the Myerson reserve gives the known revenue of five twelfths. Empirical
+  reserves are checked too.
+- `test_bidding.py`, `test_pacing.py`: shading against brute force on the landscape, the
+  symmetric first-price equilibrium, log-normal landscape fits, budgets never exceeded, dual
+  descent approaching the hindsight optimum, and the hindsight bound against greedy subsets.
+  `test_pacing.py` also checks the Rust pacing simulator against the Python reference.
 - `test_ctr.py`, `test_hashing.py`, `test_metrics.py`, `test_data.py`: FTRL and FM learning, L1
-  sparsity, early stopping, save and load (with a loader that refuses code), hashing stability,
-  AUC against brute force with ties, DeLong variance against the bootstrap, Platt and isotonic
-  calibration, Criteo parsing and integer binning.
+  sparsity, early stopping (ending training when validation results stop improving), and save and
+  load, with a loader that refuses to run code. Also hashing stability, AUC against brute force
+  with ties, DeLong variance against the bootstrap, Platt and isotonic calibration, Criteo parsing
+  and integer binning (grouping integer values into ranges).
 - `test_ope.py`, `test_obd.py`: hand-computed estimates, recovery of a known policy value, DR
   unbiased with a wrong model, bootstrap intervals against the analytic standard error, and
   cross-fitted reward models that never score a round they trained on.
-- `test_rust_parity.py`: the Rust FTRL, FM and pacing simulator against the numpy reference.
+- `test_rust_parity.py`: the Rust FTRL and FM against the numpy reference.
 - `test_cli.py`, `test_service.py`: every command and route, malformed and oversized requests,
-  metrics counters, and a real socket round trip.
-- `test_validation.py` (opt-in): every estimator against obp 0.5.7 (synthetic logs and an Open
-  Bandit sample), metrics, isotonic calibration and logistic regression against scikit-learn.
+  metrics counters, and a real network socket round trip.
+- `test_validation.py` (runs only when requested): every estimator against obp 0.5.7, on
+  synthetic logs and an Open Bandit sample. Also the metrics, isotonic calibration and logistic
+  regression against scikit-learn.
 
-CI (`.github/workflows/ci.yml`) runs format, lint, type check and the coverage-gated tests on
-Python 3.12, 3.13, 3.14 and 3.15, the Rust checks with the parity tests, the reference-library tests, and a
-package and Docker image build. CodeQL runs on main and weekly.
+Continuous integration (CI, the automatic checks in `.github/workflows/ci.yml`) runs the format
+check, lint (style and error checks), type check and tests on Python 3.12, 3.13, 3.14 and 3.15.
+The tests have a coverage gate: they fail if they cover less than 80% of the code's lines and
+branches. CI also runs the Rust checks with the parity tests, the reference-library tests, and a
+package build and a Docker image build (a container image of the service). CodeQL (GitHub's code
+security scanner) runs on main and weekly.
 
 ## Responsible AI
 
@@ -499,35 +656,41 @@ package and Docker image build. CodeQL runs on main and weekly.
 - **Data card:** [docs/DATA_CARD.md](docs/DATA_CARD.md)
 - **Threat model:** [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md)
 
-The models predict clicks on anonymized public logs; nothing here targets real users or spends
-money. Off-policy estimates are reported with intervals and with their error against on-policy
-truth, so a confident but wrong estimate is visible.
+The models predict clicks on anonymized public logs. Nothing here targets real users or spends
+money. Off-policy estimates are reported with intervals and with their error against the
+on-policy truth, so a confident but wrong estimate is visible.
 
 ## Limitations
 
-- Criteo is used at 1 in 4 rows (9.17M training rows) to fit the disk and memory budget, so the
-  CTR numbers are not directly comparable with published results on the full 36.7M-row split;
-  the gap to the BARS FM (0.0095 AUC) is not decomposed into data and model.
-- The FM at 2^24 buckets, FFM and deep CTR models were not run (memory on an 8 GB machine).
-- The OPE target policies are context free: the BTS policy is represented by its average item
-  distribution over the week, which is why every estimator misses the men campaign by about 10%.
+- Criteo is used at 1 row in 4 (9.17 million training rows) to fit the disk and memory budget. So
+  the CTR numbers are not directly comparable with published results on the full
+  36.7-million-row split. The gap to the BARS FM (0.0095 AUC) has not been split into a data part
+  and a model part.
+- The FM at 2^24 buckets, FFM and deep CTR models were not run, because of the memory limit of an
+  8 GB machine.
+- The OPE target policies are context free: they ignore user features. The BTS policy is
+  represented by its average item distribution over the week. This is why every estimator misses
+  by about 10% on the men campaign when BTS is estimated from the random log.
 - The auction values are built from market prices and predicted CTRs, not from real advertiser
-  values, and the incentive check searches a grid of 13 bid factors with the others truthful; it
-  finds profitable deviations but cannot prove there are none.
-- Market prices are Criteo's prices for impressions it won (censored and rescaled), so shading
-  and pacing results are relative, not in currency.
-- Timings were taken on a shared machine whose load varied during the runs (load average up to
-  108 during the final CTR runs); the Rust against Python tables run both sides back to back to
-  keep the comparison fair, but absolute FM training throughput varied from 37k to 290k rows per second between runs.
-- Installing from source compiles the Rust core and needs a Rust toolchain; `backend="python"`
+  values. The incentive check searches a grid of 13 bid factors while the others bid truthfully.
+  It finds profitable deviations, but it cannot prove that there are none.
+- Market prices are Criteo's prices for impressions it won. They are censored (only won
+  impressions are seen) and rescaled, so shading and pacing results are relative, not in
+  currency.
+- Timings were taken on a shared machine whose load varied during the runs. The load average (the
+  number of processes running or waiting for the processor) reached 108 during the final CTR
+  runs. The tables comparing Rust with Python run both sides back to back to keep the comparison
+  fair. Still, absolute FM training speed varied from 37,000 to 290,000 rows per second between
+  runs.
+- Installing from source compiles the Rust core and needs a Rust toolchain. `backend="python"`
   selects the slower reference implementations.
 
 ## Roadmap
 
-- [ ] Field-aware factorization machines and a small DeepFM for the gap to the published numbers.
-- [ ] Contextual target policies on the Open Bandit Dataset (the BTS log has no user context).
-- [ ] Bid landscapes conditioned on context, and pacing with a ROI constraint.
-- [ ] Multi-threaded (Hogwild) FTRL training in the Rust core.
+- [ ] Field-aware factorization machines and a small DeepFM, to study the gap to the published numbers.
+- [ ] Contextual target policies, which use user features, on the Open Bandit Dataset (the BTS log has no user context).
+- [ ] Bid landscapes that depend on context, and pacing with a return-on-investment (ROI) constraint.
+- [ ] Multi-threaded FTRL training in the Rust core, with Hogwild (lock-free parallel updates).
 
 ## License
 
